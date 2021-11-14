@@ -1,3 +1,8 @@
+import * as THREE from './three.module.js';
+
+import { PointerLockControls } from './PointerLockControls.js';
+
+
 let camera, scene, renderer, controls;
 
 const objects = [];
