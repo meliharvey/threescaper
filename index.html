@@ -180,7 +180,7 @@
 				camera.position.y = 200;
 
 				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0xffffff );
+				scene.background = new THREE.Color( 0xaec6d4 );
 				//scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
 
 				const light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.5 );
@@ -307,8 +307,6 @@
 				const manager = new THREE.LoadingManager();
 				manager.addHandler( /\.dds$/i, new DDSLoader() );
 
-				let emissive = new THREE.TextureLoader().load( './3d/TownEmissive.png' )
-				console.log(emissive)
 				var materials = new THREE.MeshStandardMaterial();
 
 				new MTLLoader( manager )
