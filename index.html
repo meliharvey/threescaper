@@ -286,8 +286,6 @@
 				collision_up = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, 1, 0 ), 0, 5 );
 				collision = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, 0, 1 ), 0, 5 );
 
-				sun = new THREE.Vector3();
-
 
 				// model
 
@@ -338,12 +336,13 @@
 				// water
 				const waterGeometry = new THREE.PlaneGeometry( 10000, 10000 );
 
+				sun = new THREE.Vector3();
 				water = new Water(
 					waterGeometry,
 					{
 						textureWidth: 512,
 						textureHeight: 512,
-						waterNormals: new THREE.TextureLoader().load( '../textures/waternormals.jpg', function ( texture ) {
+						waterNormals: new THREE.TextureLoader().load( './textures/waternormals.jpg', function ( texture ) {
 
 							texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
