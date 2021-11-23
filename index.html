@@ -420,36 +420,37 @@
 				// effectSobel.uniforms[ 'tDiffuse' ] =  new THREE.Color(  0x00ff00 );
 				// composer.addPass( effectSobel );
 
-				// GUI\
-				const gui = new GUI();
-
-				gui.add( ssaoPass, 'output', {
-					'Default': SSAOPass.OUTPUT.Default,
-					'SSAO Only': SSAOPass.OUTPUT.SSAO,
-					'SSAO Only + Blur': SSAOPass.OUTPUT.Blur,
-					'Beauty': SSAOPass.OUTPUT.Beauty,
-					'Depth': SSAOPass.OUTPUT.Depth,
-					'Normal': SSAOPass.OUTPUT.Normal
-				} ).onChange( function ( value ) {
-
-					ssaoPass.output = parseInt( value );
-
-				} );
-				gui.add( ssaoPass, 'kernelRadius' ).min( 0 ).max( 64 );
-				gui.add( ssaoPass, 'minDistance' ).min( 0.001 ).max( 0.02 );
-				gui.add( ssaoPass, 'maxDistance' ).min( 0.01 ).max( 0.6 );
+				// // GUI\
+				// const gui = new GUI();
+				//
+				// gui.add( ssaoPass, 'output', {
+				// 	'Default': SSAOPass.OUTPUT.Default,
+				// 	'SSAO Only': SSAOPass.OUTPUT.SSAO,
+				// 	'SSAO Only + Blur': SSAOPass.OUTPUT.Blur,
+				// 	'Beauty': SSAOPass.OUTPUT.Beauty,
+				// 	'Depth': SSAOPass.OUTPUT.Depth,
+				// 	'Normal': SSAOPass.OUTPUT.Normal
+				// } ).onChange( function ( value ) {
+				//
+				// 	ssaoPass.output = parseInt( value );
+				//
+				// } );
+				// gui.add( ssaoPass, 'kernelRadius' ).min( 0 ).max( 64 );
+				// gui.add( ssaoPass, 'minDistance' ).min( 0.001 ).max( 0.02 );
+				// gui.add( ssaoPass, 'maxDistance' ).min( 0.01 ).max( 0.6 );
 
 				// const folderSky = gui.addFolder( 'Sky' );
 				// folderSky.add( parameters, 'elevation', -90, 90, 0.1 ).onChange( updateSun );
 				// folderSky.add( parameters, 'azimuth', - 180, 180, 0.1 ).onChange( updateSun );
 				// folderSky.open();
 
-				const waterUniforms = water.material.uniforms;
+				// const waterUniforms = water.material.uniforms;
+				// const folderWater = gui.addFolder( 'Water' );
+				// folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
+				// folderWater.add( waterUniforms.size, 'value', 0.1, 10, 0.1 ).name( 'size' );
+				// folderWater.open();
 
-				const folderWater = gui.addFolder( 'Water' );
-				folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
-				folderWater.add( waterUniforms.size, 'value', 0.1, 10, 0.1 ).name( 'size' );
-				folderWater.open();
+
 
 				//
 
