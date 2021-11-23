@@ -1,0 +1,4 @@
+newmtl Town
+map_Kd ./TownColor.png
+map_d ./TownEmissive.png
+map_Tr ./TownEmissive.png

@@ -17,13 +17,28 @@
 				width: 100%;
 				height: 100%;
 
-				display: flex;
-				flex-direction: column;
-				justify-content: center;
-				align-items: center;
+				display: -webkit-box;
+				display: -moz-box;
+				display: box;
 
+				-webkit-box-orient: horizontal;
+				-moz-box-orient: horizontal;
+				box-orient: horizontal;
+
+				-webkit-box-pack: center;
+				-moz-box-pack: center;
+				box-pack: center;
+
+				-webkit-box-align: center;
+				-moz-box-align: center;
+				box-align: center;
+
+				color: #ffffff;
 				text-align: center;
+				font-family: Arial;
 				font-size: 14px;
+				line-height: 24px;
+
 				cursor: pointer;
 			}
 		</style>
@@ -31,28 +46,54 @@
 	<body>
 		<div id="blocker">
 			<div id="instructions">
-				<p style="font-size:36px">
-					Click to play
-				</p>
-				<p>
-					Move: WASD<br/>
-					Jump: SPACE<br/>
-					Look: MOUSE
-				</p>
+				<div id="holder">
+					<p>Drag and drop</br>Townscaper OBJ file here</p>
+				</div>
+				</br>
+				<span style="font-size:36px">Click to play</span>
+				<br /><br />
+				Move: WASD<br/>
+				Jump: SPACE<br/>
+				Look: MOUSE
 			</div>
+
 		</div>
 
 		<script type="module">
 
-			import * as THREE from './js/three.module.js';
+			import * as THREE from './js/build/three.module.js';
 
 			import { PointerLockControls } from './js/PointerLockControls.js';
 
-			let camera, scene, renderer, controls;
+			import { GUI } from './js/dat.gui.module.js';
+			import { DDSLoader } from './js/examples/jsm/loaders/DDSLoader.js';
+			import { MTLLoader } from './js/examples/jsm/loaders/MTLLoader.js';
+			import { OBJLoader } from './js/examples/jsm/loaders/OBJLoader.js';
+			import { Water } from './js/Water.js';
+			import { Sky } from './js/Sky.js';
+			import { EffectComposer } from './js/examples/jsm/postprocessing/EffectComposer.js';
+			import { RenderPass } from './js/examples/jsm/postprocessing/RenderPass.js';
+			import { SSAOPass } from './js/examples/jsm/postprocessing/SSAOPass.js';
+			import { SobelOperatorShader } from './js/examples/jsm/shaders/SobelOperatorShader.js';
+			import { ShaderPass } from './js/examples/jsm/postprocessing/ShaderPass.js';
+			import { OutlineEffect } from './js/examples/jsm/effects/OutlineEffect.js';
+
+			let camera, scene, renderer, controls, water, sun;
+			let composer, renderPass, saoPass;
+			let effectSobel, effect;
+
 
 			const objects = [];
 
 			let raycaster;
+			let floorHeight = 0;
+			let previousLocation = new THREE.Vector3();
+			let collision;
+			let collision_up;
+			let onObject = false;
+			let hitObject = false;
+			let hitAbove = false;
+			let movementDirection =new THREE.Vector3();
 
 			let moveForward = false;
 			let moveBackward = false;
@@ -69,18 +110,86 @@
 			init();
 			animate();
 
+			function parseTownscape( object, materials ) {
+
+				const features = new THREE.Group();
+				features.name = 'Townscape'
+
+				for ( var i = 0; i < object.children.length; i ++ ) {
+					let feature = object.children[i].clone()
+					feature.scale.multiplyScalar(40);
+
+					if ( feature.name == 'House') {
+						feature.material = new THREE.MeshStandardMaterial();
+						feature.material.map = materials.materials.Town.map;
+						//feature.material.specularMap = materials.materials.Town.alphaMap
+						// feature.material.emissive = 0xffffff
+						// feature.material.emissiveIntensity = 100
+						objects.push( feature )
+						features.add( feature );
+					}
+					else if ( feature.name == 'Sand') {
+						feature.material = new THREE.MeshStandardMaterial();
+						feature.material.map = materials.materials.Town.map
+
+						objects.push( feature )
+						features.add( feature );
+					}
+					else if ( feature.name == 'Fencing') {
+						feature.material = new THREE.MeshStandardMaterial();
+						feature.material.map = materials.materials.Town.map
+						feature.material.side = THREE.DoubleSide;
+						feature.material.wireframe = true;
+						feature.material.wireframeLinewidth = 6;
+						objects.push( feature )
+						features.add( feature );
+					}
+					else if ( feature.name == 'Windows') {
+						feature.material = new THREE.MeshStandardMaterial();
+						feature.material.map = materials.materials.Town.map
+						feature.material.side = THREE.BackSide;
+						objects.push( feature )
+						features.add( feature );
+					}
+					else if ( feature.name == 'Plants') {
+						feature.material = new THREE.MeshStandardMaterial();
+						feature.material.map = materials.materials.Town.map
+						feature.material.side = THREE.FrontSide;
+						objects.push( feature )
+						features.add( feature );
+					}
+					else if ( feature.name == 'Props') {
+						feature.material = new THREE.MeshStandardMaterial();
+						feature.material.map = materials.materials.Town.map
+
+						feature.material.side = THREE.FrontSide;
+						objects.push( feature )
+						features.add( feature );
+					}
+					else if ( feature.name == 'Birds') {
+					}
+					else if ( feature.name == 'Water') {
+					}
+				}
+			  return features
+			}
+
 			function init() {
 
 				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
-				camera.position.y = 10;
+				camera.position.y = 200;
 
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0xffffff );
-				scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
+				//scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
 
-				const light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.75 );
-				light.position.set( 0.5, 1, 0.75 );
+				const light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.5 );
+				light.position.set( 0, 0, 0 );
 				scene.add( light );
+
+				const directionalLight = new THREE.DirectionalLight( 0xeeeeff,1 );
+				directionalLight.position.set( 100, 100, 100 );
+				scene.add( directionalLight );
 
 				controls = new PointerLockControls( camera, document.body );
 
@@ -91,7 +200,7 @@
 
 					controls.lock();
 
-				} );
+				}, false );
 
 				controls.addEventListener( 'lock', function () {
 
@@ -111,29 +220,29 @@
 
 				const onKeyDown = function ( event ) {
 
-					switch ( event.code ) {
+					switch ( event.keyCode ) {
 
-						case 'ArrowUp':
-						case 'KeyW':
+						case 38: // up
+						case 87: // w
 							moveForward = true;
 							break;
 
-						case 'ArrowLeft':
-						case 'KeyA':
+						case 37: // left
+						case 65: // a
 							moveLeft = true;
 							break;
 
-						case 'ArrowDown':
-						case 'KeyS':
+						case 40: // down
+						case 83: // s
 							moveBackward = true;
 							break;
 
-						case 'ArrowRight':
-						case 'KeyD':
+						case 39: // right
+						case 68: // d
 							moveRight = true;
 							break;
 
-						case 'Space':
+						case 32: // space
 							if ( canJump === true ) velocity.y += 350;
 							canJump = false;
 							break;
@@ -144,25 +253,25 @@
 
 				const onKeyUp = function ( event ) {
 
-					switch ( event.code ) {
+					switch ( event.keyCode ) {
 
-						case 'ArrowUp':
-						case 'KeyW':
+						case 38: // up
+						case 87: // w
 							moveForward = false;
 							break;
 
-						case 'ArrowLeft':
-						case 'KeyA':
+						case 37: // left
+						case 65: // a
 							moveLeft = false;
 							break;
 
-						case 'ArrowDown':
-						case 'KeyS':
+						case 40: // down
+						case 83: // s
 							moveBackward = false;
 							break;
 
-						case 'ArrowRight':
-						case 'KeyD':
+						case 39: // right
+						case 68: // d
 							moveRight = false;
 							break;
 
@@ -170,81 +279,54 @@
 
 				};
 
-				document.addEventListener( 'keydown', onKeyDown );
-				document.addEventListener( 'keyup', onKeyUp );
+				document.addEventListener( 'keydown', onKeyDown, false );
+				document.addEventListener( 'keyup', onKeyUp, false );
 
-				raycaster = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, - 1, 0 ), 0, 10 );
+				raycaster = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, - 1, 0 ), 0, 16 );
+				collision_up = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, 1, 0 ), 0, 5 );
+				collision = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, 0, 1 ), 0, 5 );
 
-				// floor
+				sun = new THREE.Vector3();
 
-				let floorGeometry = new THREE.PlaneGeometry( 2000, 2000, 100, 100 );
-				floorGeometry.rotateX( - Math.PI / 2 );
 
-				// vertex displacement
+				// model
 
-				let position = floorGeometry.attributes.position;
+				const onProgress = function ( xhr ) {
 
-				for ( let i = 0, l = position.count; i < l; i ++ ) {
+					if ( xhr.lengthComputable ) {
 
-					vertex.fromBufferAttribute( position, i );
+						const percentComplete = xhr.loaded / xhr.total * 100;
+						console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
 
-					vertex.x += Math.random() * 20 - 10;
-					vertex.y += Math.random() * 2;
-					vertex.z += Math.random() * 20 - 10;
+					}
 
-					position.setXYZ( i, vertex.x, vertex.y, vertex.z );
+				};
 
-				}
+				const onError = function () { };
 
-				floorGeometry = floorGeometry.toNonIndexed(); // ensure each face has unique vertices
+				const manager = new THREE.LoadingManager();
+				manager.addHandler( /\.dds$/i, new DDSLoader() );
 
-				position = floorGeometry.attributes.position;
-				const colorsFloor = [];
+				let emissive = new THREE.TextureLoader().load( './3d/TownEmissive.png' )
+				console.log(emissive)
+				var materials = new THREE.MeshStandardMaterial();
 
-				for ( let i = 0, l = position.count; i < l; i ++ ) {
+				new MTLLoader( manager )
+					.setPath( './3d/' )
+					.load( 'Town.mtl', function ( materials ) {
 
-					color.setHSL( Math.random() * 0.3 + 0.5, 0.75, Math.random() * 0.25 + 0.75 );
-					colorsFloor.push( color.r, color.g, color.b );
+						//materials.preload();
 
-				}
+						new OBJLoader( manager )
+							.setMaterials( materials )
+							.setPath( './3d/' )
+							.load( 'GardenTown.obj', function ( object ) {
 
-				floorGeometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colorsFloor, 3 ) );
+								scene.add(parseTownscape(object, materials))
 
-				const floorMaterial = new THREE.MeshBasicMaterial( { vertexColors: true } );
+							}, onProgress, onError );
 
-				const floor = new THREE.Mesh( floorGeometry, floorMaterial );
-				scene.add( floor );
-
-				// objects
-
-				const boxGeometry = new THREE.BoxGeometry( 20, 20, 20 ).toNonIndexed();
-
-				position = boxGeometry.attributes.position;
-				const colorsBox = [];
-
-				for ( let i = 0, l = position.count; i < l; i ++ ) {
-
-					color.setHSL( Math.random() * 0.3 + 0.5, 0.75, Math.random() * 0.25 + 0.75 );
-					colorsBox.push( color.r, color.g, color.b );
-
-				}
-
-				boxGeometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colorsBox, 3 ) );
-
-				for ( let i = 0; i < 500; i ++ ) {
-
-					const boxMaterial = new THREE.MeshPhongMaterial( { specular: 0xffffff, flatShading: true, vertexColors: true } );
-					boxMaterial.color.setHSL( Math.random() * 0.2 + 0.5, 0.75, Math.random() * 0.25 + 0.75 );
-
-					const box = new THREE.Mesh( boxGeometry, boxMaterial );
-					box.position.x = Math.floor( Math.random() * 20 - 10 ) * 20;
-					box.position.y = Math.floor( Math.random() * 20 ) * 20 + 10;
-					box.position.z = Math.floor( Math.random() * 20 - 10 ) * 20;
-
-					scene.add( box );
-					objects.push( box );
-
-				}
+					} );
 
 				//
 
@@ -255,7 +337,126 @@
 
 				//
 
-				window.addEventListener( 'resize', onWindowResize );
+				// water
+				const waterGeometry = new THREE.PlaneGeometry( 10000, 10000 );
+
+				water = new Water(
+					waterGeometry,
+					{
+						textureWidth: 512,
+						textureHeight: 512,
+						waterNormals: new THREE.TextureLoader().load( '../textures/waternormals.jpg', function ( texture ) {
+
+							texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+						} ),
+						sunDirection: new THREE.Vector3(),
+						sunColor: 0xffffff,
+						waterColor: 0x001e0f,
+						distortionScale: 3.7,
+						fog: scene.fog !== undefined
+					}
+				);
+
+				water.rotation.x = - Math.PI / 2;
+
+				scene.add( water );
+
+				// Skybox
+
+				// const sky = new Sky();
+				// sky.scale.setScalar( 10000 );
+				// scene.add( sky );
+				//
+				// const skyUniforms = sky.material.uniforms;
+				//
+				// skyUniforms[ 'turbidity' ].value = 10;
+				// skyUniforms[ 'rayleigh' ].value = 2;
+				// skyUniforms[ 'mieCoefficient' ].value = 0.005;
+				// skyUniforms[ 'mieDirectionalG' ].value = 0.8;
+				//
+				// const parameters = {
+				// 	elevation: 2,
+				// 	azimuth: 180
+				// };
+				//
+				// const pmremGenerator = new THREE.PMREMGenerator( renderer );
+				//
+				// function updateSun() {
+				//
+				// 	const phi = THREE.MathUtils.degToRad( 90 - parameters.elevation );
+				// 	const theta = THREE.MathUtils.degToRad( parameters.azimuth );
+				//
+				// 	sun.setFromSphericalCoords( 1, phi, theta );
+				//
+				// 	sky.material.uniforms[ 'sunPosition' ].value.copy( sun );
+				// 	water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
+				//
+				// 	scene.environment = pmremGenerator.fromScene( sky ).texture;
+				//
+				// }
+				//
+				// updateSun();
+
+
+				effect = new OutlineEffect( renderer, {
+			    defaultThickness: 0.005,
+			    //defaultColor: new THREE.Color( 0x000000 ),
+			    //defaultAlpha: 1,
+			    //defaultKeepAlive: true
+				});
+
+				const width = window.innerWidth;
+				const height = window.innerHeight;
+				composer = new EffectComposer( renderer );
+				const ssaoPass = new SSAOPass( scene, camera, width, height );
+				ssaoPass.kernelRadius = 32;
+				ssaoPass.minDistance = 0.001;
+				ssaoPass.maxDistance = 0.2;
+				composer.addPass( ssaoPass );
+
+				// Sobel operator
+				//
+				// effectSobel = new ShaderPass( SobelOperatorShader );
+				// effectSobel.uniforms[ 'resolution' ].value.x = window.innerWidth * window.devicePixelRatio;
+				// effectSobel.uniforms[ 'resolution' ].value.y = window.innerHeight * window.devicePixelRatio;
+				// effectSobel.uniforms[ 'tDiffuse' ] =  new THREE.Color(  0x00ff00 );
+				// composer.addPass( effectSobel );
+
+				// GUI\
+				const gui = new GUI();
+
+				gui.add( ssaoPass, 'output', {
+					'Default': SSAOPass.OUTPUT.Default,
+					'SSAO Only': SSAOPass.OUTPUT.SSAO,
+					'SSAO Only + Blur': SSAOPass.OUTPUT.Blur,
+					'Beauty': SSAOPass.OUTPUT.Beauty,
+					'Depth': SSAOPass.OUTPUT.Depth,
+					'Normal': SSAOPass.OUTPUT.Normal
+				} ).onChange( function ( value ) {
+
+					ssaoPass.output = parseInt( value );
+
+				} );
+				gui.add( ssaoPass, 'kernelRadius' ).min( 0 ).max( 64 );
+				gui.add( ssaoPass, 'minDistance' ).min( 0.001 ).max( 0.02 );
+				gui.add( ssaoPass, 'maxDistance' ).min( 0.01 ).max( 0.6 );
+
+				// const folderSky = gui.addFolder( 'Sky' );
+				// folderSky.add( parameters, 'elevation', -90, 90, 0.1 ).onChange( updateSun );
+				// folderSky.add( parameters, 'azimuth', - 180, 180, 0.1 ).onChange( updateSun );
+				// folderSky.open();
+
+				const waterUniforms = water.material.uniforms;
+
+				const folderWater = gui.addFolder( 'Water' );
+				folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
+				folderWater.add( waterUniforms.size, 'value', 0.1, 10, 0.1 ).name( 'size' );
+				folderWater.open();
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
 
 			}
 
@@ -268,7 +469,33 @@
 
 			}
 
+			function pointHelpers(p0, color=0xff0000) {
+				const point = new THREE.Points(
+					new THREE.BufferGeometry().setFromPoints( [p0] ),
+					new THREE.PointsMaterial( { color: color, size: 0.3 } )
+				)
+				scene.add( point );
+			}
+
+
+			function rayHelpers(p0, p1, color=0x0000ff) {
+				const point = new THREE.Points(
+					new THREE.BufferGeometry().setFromPoints( [p0] ),
+					new THREE.PointsMaterial( { color: 0x88ff88, size: 0.3 } )
+				)
+				scene.add( point );
+
+				const material = new THREE.LineBasicMaterial({
+					color: color
+				});
+				const geometry = new THREE.BufferGeometry().setFromPoints( [p0, p1] );
+				const line = new THREE.Line( geometry, material );
+				scene.add( line );
+			}
+
 			function animate() {
+
+				water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
 
 				requestAnimationFrame( animate );
 
@@ -276,32 +503,68 @@
 
 				if ( controls.isLocked === true ) {
 
-					raycaster.ray.origin.copy( controls.getObject().position );
-					raycaster.ray.origin.y -= 10;
-
-					const intersections = raycaster.intersectObjects( objects, false );
-
-					const onObject = intersections.length > 0;
-
 					const delta = ( time - prevTime ) / 1000;
 
 					velocity.x -= velocity.x * 10.0 * delta;
 					velocity.z -= velocity.z * 10.0 * delta;
 
-					velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+					velocity.y = Math.max(-300, velocity.y - 9.8 * 100.0 * delta); // 100.0 = mass
 
 					direction.z = Number( moveForward ) - Number( moveBackward );
 					direction.x = Number( moveRight ) - Number( moveLeft );
 					direction.normalize(); // this ensures consistent movements in all directions
 
-					if ( moveForward || moveBackward ) velocity.z -= direction.z * 400.0 * delta;
-					if ( moveLeft || moveRight ) velocity.x -= direction.x * 400.0 * delta;
+					collision_up.ray.origin.copy( controls.getObject().position );
+					const intersections_above = collision_up.intersectObjects( objects );
+					hitAbove = intersections_above.length > 0
+
+					raycaster.ray.origin.copy( controls.getObject().position );
+					const intersections = raycaster.intersectObjects( objects );
+					onObject = intersections.length > 0
+
+					var vector = new THREE.Vector3( 0, 0, -1 ); // local direction of camera
+					var global_camera_direction = vector.clone().applyQuaternion( camera.quaternion );
+					global_camera_direction.y = 0;
+
+					collision.ray.origin.copy( controls.getObject().position );
+					collision.ray.origin.y = collision.ray.origin.y - 7;
+
+					// if moving, update direction of collision ray
+					if (direction.x != 0 || direction.z != 0 ) {
+						var theta = new THREE.Vector3(0, 0, 1).angleTo(direction);
+						if ( direction.x > 0 ) {
+							theta = -theta
+						}
+						movementDirection = global_camera_direction.clone().applyAxisAngle( new THREE.Vector3(0, 1, 0), theta)
+					}
+
+					collision.ray.direction = movementDirection;
+					//rayHelpers(collision.ray.origin, collision.ray.origin.clone().add( collision.ray.direction ), 0x0000ff);
+					//rayHelpers(raycaster.ray.origin, raycaster.ray.origin.clone().add( raycaster.ray.direction ), 0xff00ff);
+					const intersections_z = collision.intersectObjects( objects );
+					hitObject = intersections_z.length > 0;
+
+					if ( moveForward || moveBackward ) velocity.z -= direction.z * 600.0 * delta;
+					if ( moveLeft || moveRight ) velocity.x -= direction.x * 600.0 * delta;
+
 
 					if ( onObject === true ) {
-
+						console.log('onObject')
+						controls.getObject().position.y = intersections[0].point.y + 15
 						velocity.y = Math.max( 0, velocity.y );
 						canJump = true;
+					}
 
+					if ( hitAbove === true ) {
+						console.log('hitAbove')
+						velocity.y = Math.min( 0, velocity.y );
+					}
+
+					if ( hitObject === true ) {
+						console.log('hitObject')
+						velocity.x = 0
+						velocity.z = 0
+						canJump = true;
 					}
 
 					controls.moveRight( - velocity.x * delta );
@@ -309,10 +572,10 @@
 
 					controls.getObject().position.y += ( velocity.y * delta ); // new behavior
 
-					if ( controls.getObject().position.y < 10 ) {
+					if ( controls.getObject().position.y < 15 ) {
 
 						velocity.y = 0;
-						controls.getObject().position.y = 10;
+						controls.getObject().position.y = 15;
 
 						canJump = true;
 
@@ -322,9 +585,74 @@
 
 				prevTime = time;
 
-				renderer.render( scene, camera );
+				effect.render( scene, camera );
 
 			}
+
+			function setupDragDrop() {
+	      var holder = document.getElementById('holder');
+	      holder.ondragover = function() {
+	        this.className = 'hover';
+	        return false;
+	      };
+
+	      holder.ondragend = function() {
+	        this.className = '';
+	        return false;
+	      };
+
+	      holder.ondrop = function(e) {
+
+					const onProgress = function ( xhr ) {
+
+						if ( xhr.lengthComputable ) {
+
+							const percentComplete = xhr.loaded / xhr.total * 100;
+							console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
+
+						}
+
+					};
+
+					const onError = function () { };
+
+					console.log('uploading obj')
+					this.className = '';
+		      e.preventDefault();
+
+		      let file = e.dataTransfer.files[0];
+		      let reader = new FileReader();
+		      reader.onload = function(event) {
+
+						let selectedObject = scene.getObjectByName('Townscape');
+    				scene.remove( selectedObject );
+						objects.splice( 0, objects.length )
+						camera.position.y = 200;
+
+						var objstring = event.target.result // This is your obj file
+						console.log('ob')
+						const manager = new THREE.LoadingManager();
+						manager.addHandler( /\.dds$/i, new DDSLoader() );
+
+						new MTLLoader( manager )
+							.setPath( './3d/' )
+							.load( 'Town.mtl', function ( materials ) {
+
+								materials.preload();
+
+								var loader = new OBJLoader();
+								var obj3D = loader.parse(objstring);
+								console.log(obj3D)
+								scene.add(parseTownscape(obj3D, materials))
+
+						} );
+		      };
+		      reader.readAsText(file);
+		      return false;
+			   }
+    	}
+
+			setupDragDrop()
 
 		</script>
 	</body>

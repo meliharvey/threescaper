@@ -37,6 +37,20 @@ button {
 	z-index: 1; /* TODO Solve this in HTML */
 }
 
+#holder {
+	border: 10px dashed #fff;
+	width: 200px;
+	height: 200px;
+	margin: 20px;
+	display: flex;
+  justify-content: center;
+  align-items: center;
+ }
+
+#holder.hover {
+	border: 16px dashed #fff;
+}
+
 a, button, input, select {
 	pointer-events: auto;
 }
