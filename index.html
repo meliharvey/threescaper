@@ -70,17 +70,15 @@
 			import { MTLLoader } from './js/examples/jsm/loaders/MTLLoader.js';
 			import { OBJLoader } from './js/examples/jsm/loaders/OBJLoader.js';
 			import { Water } from './js/Water.js';
-			import { Sky } from './js/Sky.js';
 			import { EffectComposer } from './js/examples/jsm/postprocessing/EffectComposer.js';
 			import { RenderPass } from './js/examples/jsm/postprocessing/RenderPass.js';
 			import { SSAOPass } from './js/examples/jsm/postprocessing/SSAOPass.js';
-			import { SobelOperatorShader } from './js/examples/jsm/shaders/SobelOperatorShader.js';
 			import { ShaderPass } from './js/examples/jsm/postprocessing/ShaderPass.js';
 			import { OutlineEffect } from './js/examples/jsm/effects/OutlineEffect.js';
 
 			let camera, scene, renderer, controls, water, sun;
 			let composer, renderPass, saoPass;
-			let effectSobel, effect;
+			let effect;
 
 
 			const objects = [];
@@ -356,44 +354,7 @@
 				);
 
 				water.rotation.x = - Math.PI / 2;
-
 				scene.add( water );
-
-				// Skybox
-
-				// const sky = new Sky();
-				// sky.scale.setScalar( 10000 );
-				// scene.add( sky );
-				//
-				// const skyUniforms = sky.material.uniforms;
-				//
-				// skyUniforms[ 'turbidity' ].value = 10;
-				// skyUniforms[ 'rayleigh' ].value = 2;
-				// skyUniforms[ 'mieCoefficient' ].value = 0.005;
-				// skyUniforms[ 'mieDirectionalG' ].value = 0.8;
-				//
-				// const parameters = {
-				// 	elevation: 2,
-				// 	azimuth: 180
-				// };
-				//
-				// const pmremGenerator = new THREE.PMREMGenerator( renderer );
-				//
-				// function updateSun() {
-				//
-				// 	const phi = THREE.MathUtils.degToRad( 90 - parameters.elevation );
-				// 	const theta = THREE.MathUtils.degToRad( parameters.azimuth );
-				//
-				// 	sun.setFromSphericalCoords( 1, phi, theta );
-				//
-				// 	sky.material.uniforms[ 'sunPosition' ].value.copy( sun );
-				// 	water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
-				//
-				// 	scene.environment = pmremGenerator.fromScene( sky ).texture;
-				//
-				// }
-				//
-				// updateSun();
 
 
 				effect = new OutlineEffect( renderer, {
@@ -411,14 +372,6 @@
 				ssaoPass.minDistance = 0.001;
 				ssaoPass.maxDistance = 0.2;
 				composer.addPass( ssaoPass );
-
-				// Sobel operator
-				//
-				// effectSobel = new ShaderPass( SobelOperatorShader );
-				// effectSobel.uniforms[ 'resolution' ].value.x = window.innerWidth * window.devicePixelRatio;
-				// effectSobel.uniforms[ 'resolution' ].value.y = window.innerHeight * window.devicePixelRatio;
-				// effectSobel.uniforms[ 'tDiffuse' ] =  new THREE.Color(  0x00ff00 );
-				// composer.addPass( effectSobel );
 
 				// // GUI\
 				// const gui = new GUI();
@@ -439,10 +392,6 @@
 				// gui.add( ssaoPass, 'minDistance' ).min( 0.001 ).max( 0.02 );
 				// gui.add( ssaoPass, 'maxDistance' ).min( 0.01 ).max( 0.6 );
 
-				// const folderSky = gui.addFolder( 'Sky' );
-				// folderSky.add( parameters, 'elevation', -90, 90, 0.1 ).onChange( updateSun );
-				// folderSky.add( parameters, 'azimuth', - 180, 180, 0.1 ).onChange( updateSun );
-				// folderSky.open();
 
 				// const waterUniforms = water.material.uniforms;
 				// const folderWater = gui.addFolder( 'Water' );
