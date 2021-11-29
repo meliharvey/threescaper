@@ -369,8 +369,8 @@
 
 						new OBJLoader( manager )
 							.setMaterials( materials )
-							.setPath( './working_dir/' )
-							.load( 'TownyX75KDWHQOM90exp.obj', function ( object ) {
+							.setPath( './3d/' )
+							.load( 'GardenTown.obj', function ( object ) {
 
 								scene.add(parseTownscape(object, materials))
 							}, onProgress, onError );
