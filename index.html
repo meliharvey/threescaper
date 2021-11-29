@@ -70,16 +70,8 @@
 			import { MTLLoader } from './js/examples/jsm/loaders/MTLLoader.js';
 			import { OBJLoader } from './js/examples/jsm/loaders/OBJLoader.js';
 			import { Water } from './js/Water.js';
-			import { EffectComposer } from './js/examples/jsm/postprocessing/EffectComposer.js';
-			import { RenderPass } from './js/examples/jsm/postprocessing/RenderPass.js';
-			import { SSAOPass } from './js/examples/jsm/postprocessing/SSAOPass.js';
-			import { ShaderPass } from './js/examples/jsm/postprocessing/ShaderPass.js';
-			import { OutlineEffect } from './js/examples/jsm/effects/OutlineEffect.js';
 
-			let camera, scene, renderer, controls, water, sun;
-			let composer, renderPass, saoPass;
-			let effect;
-
+			let camera, scene, renderer, controls, water;
 
 			const objects = [];
 
@@ -108,7 +100,119 @@
 			init();
 			animate();
 
+			// LOAD THE TOWNSCAPER OBJ
+
 			function parseTownscape( object, materials ) {
+				let uniforms = {
+					townPalette: {
+		        type: "sampler2D",
+		        value: THREE.ImageUtils.loadTexture("../3d/TownPalette.png")
+			    },
+					townColor: {
+		        type: "sampler2D",
+		        value: THREE.ImageUtils.loadTexture("../3d/TownColor.png")
+			    },
+					townMaterial: {
+		        type: "sampler2D",
+		        value: THREE.ImageUtils.loadTexture("../3d/TownMaterial.png")
+			    },
+				};
+				uniforms.townColor.value.wrapS = THREE.RepeatWrapping;
+				uniforms.townMaterial.value.wrapS = THREE.RepeatWrapping;
+
+				function updateShader(shader) {
+					shader.uniforms.townColor = uniforms.townColor;
+					shader.uniforms.townPalette = uniforms.townPalette;
+					shader.uniforms.townMaterial = uniforms.townMaterial;
+					shader.vertexShader =	'varying vec2 vUv;\n' +	shader.vertexShader.replace(
+						'#include <uv_vertex>',
+						`
+						#include <uv_vertex>
+						vUv = uv;
+						`
+					)
+					shader.fragmentShader =
+						`
+						uniform sampler2D townColor;
+						varying vec2 vUv;
+						`
+					+ shader.fragmentShader.replace(
+						'vec4 diffuseColor = vec4( diffuse, opacity );',
+						`
+						vec4 diffuseColor;
+						float gap = 0.05;
+						vec2 tilePixel;
+						vec2 pixel_st = fract(vec2(vUv));
+						pixel_st = (pixel_st * vec2(128, 128)) + 0.5 + gap;
+
+						// udpate uv's so even/odd pixels to product gaps/panels
+						vec2 grout = floor(min(fract(pixel_st / 2.0) - gap, 0.0));
+						tilePixel = floor(pixel_st / 2.0) * 2.0 + grout;
+						tilePixel += 0.5;
+						vec2 tile_uv = tilePixel / vec2(128, 128);
+						vec2 final_uv = vec2(tile_uv.x, tile_uv.y);
+
+						diffuseColor = texture2D(townColor, tile_uv);
+						`
+					)
+				}
+
+				function updateShaderColor(shader) {
+					shader.uniforms.townColor = uniforms.townColor;
+					shader.uniforms.townPalette = uniforms.townPalette;
+					shader.uniforms.townMaterial = uniforms.townMaterial;
+					shader.vertexShader =	'varying vec2 vUv;\n' +	shader.vertexShader.replace(
+						'#include <uv_vertex>',
+						`
+						#include <uv_vertex>
+						vUv = uv;
+						`
+					)
+					shader.fragmentShader =
+						`
+						uniform sampler2D townPalette;
+						uniform sampler2D townColor;
+						uniform sampler2D townMaterial;
+			      varying vec2 vUv;
+						`
+ 					+ shader.fragmentShader.replace(
+			      'vec4 diffuseColor = vec4( diffuse, opacity );',
+						`
+						vec4 diffuseColor;
+						float gap = 0.05;
+						vec2 tilePixel;
+						vec2 pixel_st = fract(vec2(vUv));
+						pixel_st = (pixel_st * vec2(128, 128)) + 0.5 + gap;
+
+						// udpate uv's so even/odd pixels to product gaps/panels
+						vec2 grout = floor(min(fract(pixel_st / 2.0) - gap, 0.0));
+						tilePixel = floor(pixel_st / 2.0) * 2.0 + grout;
+						tilePixel += 0.5;
+						vec2 tile_uv = tilePixel / vec2(128, 128);
+						vec2 final_uv = vec2(tile_uv.x, tile_uv.y);
+
+						// define colors
+						vec4 colorA = vec4(texelFetch(townPalette, ivec2(vUv.x, 0.5), 0));
+						vec4 colorB = texture2D(townColor, tile_uv);
+
+						// roof colors
+						vec4 roof_a = vec4(1.000, 0.558, 0.3, 0.0);
+						vec4 roof_b = vec4(0.796, 0.403, 0.262, 0.0);
+
+						// use townMaterial to mask the uv map
+						vec4 mask = texture2D(townMaterial, tile_uv);
+
+						int mat_id = 0;
+						if (mask.g >= 1.0) { mat_id = 1; }
+
+						if (mat_id == 1) {
+							colorA = mix( roof_a, roof_b, colorA );
+						}
+
+						diffuseColor = vec4(mix(colorA, colorB, colorB.a));
+						`
+			    )
+				}
 
 				const features = new THREE.Group();
 				features.name = 'Townscape'
@@ -119,75 +223,162 @@
 
 					if ( feature.name == 'House') {
 						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.map = materials.materials.Town.map;
-						//feature.material.specularMap = materials.materials.Town.alphaMap
-						// feature.material.emissive = 0xffffff
-						// feature.material.emissiveIntensity = 100
-						objects.push( feature )
-						features.add( feature );
-					}
-					else if ( feature.name == 'Sand') {
-						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.map = materials.materials.Town.map
-
-						objects.push( feature )
+						feature.material.onBeforeCompile = shader => updateShaderColor(shader);
+						feature.material.side = THREE.FrontSide;
+						feature.material.transparent = false;
+						feature.castShadow = true;
+						feature.receiveShadow = true;
+						objects.push( feature );
 						features.add( feature );
 					}
 					else if ( feature.name == 'Fencing') {
 						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.map = materials.materials.Town.map
+						feature.material.onBeforeCompile = shader => updateShader(shader);
 						feature.material.side = THREE.DoubleSide;
-						feature.material.wireframe = true;
-						feature.material.wireframeLinewidth = 6;
-						objects.push( feature )
+						feature.material.transparent = true;
+						objects.push( feature );
 						features.add( feature );
 					}
 					else if ( feature.name == 'Windows') {
 						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.map = materials.materials.Town.map
+						feature.material.onBeforeCompile = shader => updateShaderColor(shader);
 						feature.material.side = THREE.BackSide;
-						objects.push( feature )
+						feature.material.transparent = false;
+						feature.castShadow = true;
+						feature.receiveShadow = true;
+						objects.push( feature );
 						features.add( feature );
-					}
-					else if ( feature.name == 'Plants') {
-						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.map = materials.materials.Town.map
-						feature.material.side = THREE.FrontSide;
-						objects.push( feature )
-						features.add( feature );
-					}
-					else if ( feature.name == 'Props') {
-						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.map = materials.materials.Town.map
-
-						feature.material.side = THREE.FrontSide;
-						objects.push( feature )
-						features.add( feature );
-					}
-					else if ( feature.name == 'Birds') {
 					}
 					else if ( feature.name == 'Water') {
+					}
+					else {
+						feature.material = new THREE.MeshStandardMaterial();
+						feature.material.onBeforeCompile = shader => updateShader(shader);
+						feature.material.side = THREE.FrontSide;
+						feature.material.transparent = false;
+						feature.castShadow = true;
+						feature.receiveShadow = true;
+						objects.push( feature );
+						features.add( feature );
 					}
 				}
 			  return features
 			}
 
+			// INITIALIZE THREEJS SCENE
+
 			function init() {
 
-				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
 				camera.position.y = 200;
 
 				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0xaec6d4 );
+				scene.background = new THREE.Color( 0x2d6c75 );
 				//scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
 
-				const light = new THREE.HemisphereLight( 0xeeeeff, 0x777788, 0.5 );
+				const loader = new THREE.CubeTextureLoader();
+				loader.setPath( './3d/' );
+				const textureCube = loader.load( [
+					'clouds_side.jpg', 'clouds_side.jpg',
+					'clouds_top.jpg', 'clouds_top.jpg',
+					'clouds_side.jpg', 'clouds_side.jpg'
+				] );
+				scene.background = textureCube;
+
+				// LIGHTING
+
+				const light = new THREE.HemisphereLight( 0x6f9ebd, 0x293d4d, 1.2 );
 				light.position.set( 0, 0, 0 );
 				scene.add( light );
 
-				const directionalLight = new THREE.DirectionalLight( 0xeeeeff,1 );
-				directionalLight.position.set( 100, 100, 100 );
+				const directionalLightBack = new THREE.DirectionalLight( 0x6fa0bd, 0.2 );
+				directionalLightBack.position.set( -500, 0, -0 );
+				scene.add( directionalLightBack );
+
+				const directionalLight = new THREE.DirectionalLight( 0xfffdc2, 1.0 );
+				directionalLight.position.set( 500, 1000, 500 );
+				directionalLight.castShadow = true;
 				scene.add( directionalLight );
+
+				directionalLight.shadow.mapSize.width = 512;
+				directionalLight.shadow.mapSize.height = 512;
+				directionalLight.shadow.camera.near = 0;
+				directionalLight.shadow.camera.far = 3000;
+				directionalLight.shadow.camera.left = 1000;
+				directionalLight.shadow.camera.right = -1000;
+				directionalLight.shadow.camera.top = 1000;
+				directionalLight.shadow.camera.bottom = -1000;
+				directionalLight.shadow.bias = -0.01;
+
+				// //Create a helper for the shadow camera
+				// const helper = new THREE.CameraHelper( directionalLight.shadow.camera );
+				// scene.add( helper );
+
+				// WATER
+
+				const waterGeometry = new THREE.PlaneGeometry( 10000, 10000 );
+				waterGeometry.translate(0, 0, -0.1);
+
+				water = new Water(
+					waterGeometry,
+					{
+						textureWidth: 512,
+						textureHeight: 512,
+						waterNormals: new THREE.TextureLoader().load( './textures/waternormals.jpg', function ( texture ) {
+
+							texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+						} ),
+						sunDirection: new THREE.Vector3(),
+						sunColor: 0xffffff,
+						waterColor: 0x2d6c75,
+						distortionScale: 3.7,
+						size: 0.1,
+						fog: scene.fog !== undefined
+					}
+				);
+
+				water.rotation.x = - Math.PI / 2;
+				scene.add( water );
+
+				// LOAD MODEL
+
+				const onProgress = function ( xhr ) {
+
+					if ( xhr.lengthComputable ) {
+
+						const percentComplete = xhr.loaded / xhr.total * 100;
+						console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
+
+					}
+
+				};
+
+				const onError = function () { };
+
+				const manager = new THREE.LoadingManager();
+				manager.addHandler( /\.dds$/i, new DDSLoader() );
+
+				var materials = new THREE.MeshStandardMaterial();
+
+				new MTLLoader( manager )
+					.setPath( './3d/' )
+					.load( 'Town.mtl', function ( materials ) {
+
+						//materials.preload();
+
+						new OBJLoader( manager )
+							.setMaterials( materials )
+							.setPath( './working_dir/' )
+							.load( 'TownyX75KDWHQOM90exp.obj', function ( object ) {
+
+								scene.add(parseTownscape(object, materials))
+							}, onProgress, onError );
+
+					} );
+
+
+				// CONTROLS
 
 				controls = new PointerLockControls( camera, document.body );
 
@@ -284,124 +475,31 @@
 				collision_up = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, 1, 0 ), 0, 5 );
 				collision = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, 0, 1 ), 0, 5 );
 
-
-				// model
-
-				const onProgress = function ( xhr ) {
-
-					if ( xhr.lengthComputable ) {
-
-						const percentComplete = xhr.loaded / xhr.total * 100;
-						console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
-
-					}
-
-				};
-
-				const onError = function () { };
-
-				const manager = new THREE.LoadingManager();
-				manager.addHandler( /\.dds$/i, new DDSLoader() );
-
-				var materials = new THREE.MeshStandardMaterial();
-
-				new MTLLoader( manager )
-					.setPath( './3d/' )
-					.load( 'Town.mtl', function ( materials ) {
-
-						//materials.preload();
-
-						new OBJLoader( manager )
-							.setMaterials( materials )
-							.setPath( './3d/' )
-							.load( 'GardenTown.obj', function ( object ) {
-
-								scene.add(parseTownscape(object, materials))
-
-							}, onProgress, onError );
-
-					} );
-
-				//
+				// RENDERER
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 				document.body.appendChild( renderer.domElement );
 
-				//
+				// GUI
 
-				// water
-				const waterGeometry = new THREE.PlaneGeometry( 10000, 10000 );
+				const gui = new GUI();
 
-				sun = new THREE.Vector3();
-				water = new Water(
-					waterGeometry,
-					{
-						textureWidth: 512,
-						textureHeight: 512,
-						waterNormals: new THREE.TextureLoader().load( './textures/waternormals.jpg', function ( texture ) {
+				const waterUniforms = water.material.uniforms;
+				waterUniforms.size.value = 0.05;
 
-							texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+				const folderWater = gui.addFolder( 'Water' );
+				folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
+				folderWater.add( waterUniforms.size, 'value', 0.01, 1, 0.01 ).name( 'size' );
+				folderWater.add( waterUniforms.waterColor.value, 'r', 0.0, 1, 0.01 ).name( 'r' );
+				folderWater.add( waterUniforms.waterColor.value, 'g', 0.0, 1, 0.01 ).name( 'g' );
+				folderWater.add( waterUniforms.waterColor.value, 'b', 0.0, 1, 0.01 ).name( 'b' );
+				folderWater.open();
 
-						} ),
-						sunDirection: new THREE.Vector3(),
-						sunColor: 0xffffff,
-						waterColor: 0x001e0f,
-						distortionScale: 3.7,
-						fog: scene.fog !== undefined
-					}
-				);
-
-				water.rotation.x = - Math.PI / 2;
-				scene.add( water );
-
-
-				effect = new OutlineEffect( renderer, {
-			    defaultThickness: 0.005,
-			    //defaultColor: new THREE.Color( 0x000000 ),
-			    //defaultAlpha: 1,
-			    //defaultKeepAlive: true
-				});
-
-				const width = window.innerWidth;
-				const height = window.innerHeight;
-				composer = new EffectComposer( renderer );
-				const ssaoPass = new SSAOPass( scene, camera, width, height );
-				ssaoPass.kernelRadius = 32;
-				ssaoPass.minDistance = 0.001;
-				ssaoPass.maxDistance = 0.2;
-				composer.addPass( ssaoPass );
-
-				// // GUI\
-				// const gui = new GUI();
-				//
-				// gui.add( ssaoPass, 'output', {
-				// 	'Default': SSAOPass.OUTPUT.Default,
-				// 	'SSAO Only': SSAOPass.OUTPUT.SSAO,
-				// 	'SSAO Only + Blur': SSAOPass.OUTPUT.Blur,
-				// 	'Beauty': SSAOPass.OUTPUT.Beauty,
-				// 	'Depth': SSAOPass.OUTPUT.Depth,
-				// 	'Normal': SSAOPass.OUTPUT.Normal
-				// } ).onChange( function ( value ) {
-				//
-				// 	ssaoPass.output = parseInt( value );
-				//
-				// } );
-				// gui.add( ssaoPass, 'kernelRadius' ).min( 0 ).max( 64 );
-				// gui.add( ssaoPass, 'minDistance' ).min( 0.001 ).max( 0.02 );
-				// gui.add( ssaoPass, 'maxDistance' ).min( 0.01 ).max( 0.6 );
-
-
-				// const waterUniforms = water.material.uniforms;
-				// const folderWater = gui.addFolder( 'Water' );
-				// folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
-				// folderWater.add( waterUniforms.size, 'value', 0.1, 10, 0.1 ).name( 'size' );
-				// folderWater.open();
-
-
-
-				//
+				// WINDOW RESIZE
 
 				window.addEventListener( 'resize', onWindowResize, false );
 
@@ -414,30 +512,6 @@
 
 				renderer.setSize( window.innerWidth, window.innerHeight );
 
-			}
-
-			function pointHelpers(p0, color=0xff0000) {
-				const point = new THREE.Points(
-					new THREE.BufferGeometry().setFromPoints( [p0] ),
-					new THREE.PointsMaterial( { color: color, size: 0.3 } )
-				)
-				scene.add( point );
-			}
-
-
-			function rayHelpers(p0, p1, color=0x0000ff) {
-				const point = new THREE.Points(
-					new THREE.BufferGeometry().setFromPoints( [p0] ),
-					new THREE.PointsMaterial( { color: 0x88ff88, size: 0.3 } )
-				)
-				scene.add( point );
-
-				const material = new THREE.LineBasicMaterial({
-					color: color
-				});
-				const geometry = new THREE.BufferGeometry().setFromPoints( [p0, p1] );
-				const line = new THREE.Line( geometry, material );
-				scene.add( line );
 			}
 
 			function animate() {
@@ -486,8 +560,6 @@
 					}
 
 					collision.ray.direction = movementDirection;
-					//rayHelpers(collision.ray.origin, collision.ray.origin.clone().add( collision.ray.direction ), 0x0000ff);
-					//rayHelpers(raycaster.ray.origin, raycaster.ray.origin.clone().add( raycaster.ray.direction ), 0xff00ff);
 					const intersections_z = collision.intersectObjects( objects );
 					hitObject = intersections_z.length > 0;
 
@@ -496,19 +568,19 @@
 
 
 					if ( onObject === true ) {
-						console.log('onObject')
+						// console.log('onObject')
 						controls.getObject().position.y = intersections[0].point.y + 15
 						velocity.y = Math.max( 0, velocity.y );
 						canJump = true;
 					}
 
 					if ( hitAbove === true ) {
-						console.log('hitAbove')
+						// console.log('hitAbove')
 						velocity.y = Math.min( 0, velocity.y );
 					}
 
 					if ( hitObject === true ) {
-						console.log('hitObject')
+						// console.log('hitObject')
 						velocity.x = 0
 						velocity.z = 0
 						canJump = true;
@@ -532,7 +604,7 @@
 
 				prevTime = time;
 
-				effect.render( scene, camera );
+				renderer.render( scene, camera );
 
 			}
 

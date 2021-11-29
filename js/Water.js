@@ -142,11 +142,14 @@ var Water = function ( geometry, options ) {
 			'varying vec4 mirrorCoord;',
 			'varying vec4 worldPosition;',
 
+
+
 			'vec4 getNoise( vec2 uv ) {',
-			'	vec2 uv0 = ( uv / 103.0 ) + vec2(time / 17.0, time / 29.0);',
-			'	vec2 uv1 = uv / 107.0-vec2( time / -19.0, time / 31.0 );',
-			'	vec2 uv2 = uv / vec2( 8907.0, 9803.0 ) + vec2( time / 101.0, time / 97.0 );',
-			'	vec2 uv3 = uv / vec2( 1091.0, 1027.0 ) - vec2( time / 109.0, time / -113.0 );',
+			' float speed = time / 6.0;',
+			'	vec2 uv0 = ( uv / 103.0 ) + vec2(speed / 17.0, speed / 29.0);',
+			'	vec2 uv1 = uv / 107.0-vec2( speed / -19.0, speed / 31.0 );',
+			'	vec2 uv2 = uv / vec2( 8907.0, 9803.0 ) + vec2( speed / 101.0, speed / 97.0 );',
+			'	vec2 uv3 = uv / vec2( 1091.0, 1027.0 ) - vec2( speed / 109.0, speed / -113.0 );',
 			'	vec4 noise = texture2D( normalSampler, uv0 ) +',
 			'		texture2D( normalSampler, uv1 ) +',
 			'		texture2D( normalSampler, uv2 ) +',
@@ -192,7 +195,7 @@ var Water = function ( geometry, options ) {
 			'	float rf0 = 0.3;',
 			'	float reflectance = rf0 + ( 1.0 - rf0 ) * pow( ( 1.0 - theta ), 5.0 );',
 			'	vec3 scatter = max( 0.0, dot( surfaceNormal, eyeDirection ) ) * waterColor;',
-			'	vec3 albedo = mix( ( sunColor * diffuseLight * 0.3 + scatter ) * getShadowMask(), ( vec3( 0.1 ) + reflectionSample * 0.9 + reflectionSample * specularLight ), reflectance);',
+			'	vec3 albedo = mix( ( sunColor * diffuseLight * 0.3 + scatter ) * getShadowMask(), ( vec3( 0.0 ) + reflectionSample * 1.0 + reflectionSample * specularLight ), reflectance);',
 			'	vec3 outgoingLight = albedo;',
 			'	gl_FragColor = vec4( outgoingLight, alpha );',
 
