@@ -478,26 +478,26 @@
 				// RENDERER
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setPixelRatio( Math.min(window.devicePixelRatio, 1.0) );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.shadowMap.enabled = true;
 				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 				document.body.appendChild( renderer.domElement );
 
-				// GUI
-
-				const gui = new GUI();
-
-				const waterUniforms = water.material.uniforms;
-				waterUniforms.size.value = 0.05;
-
-				const folderWater = gui.addFolder( 'Water' );
-				folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
-				folderWater.add( waterUniforms.size, 'value', 0.01, 1, 0.01 ).name( 'size' );
-				folderWater.add( waterUniforms.waterColor.value, 'r', 0.0, 1, 0.01 ).name( 'r' );
-				folderWater.add( waterUniforms.waterColor.value, 'g', 0.0, 1, 0.01 ).name( 'g' );
-				folderWater.add( waterUniforms.waterColor.value, 'b', 0.0, 1, 0.01 ).name( 'b' );
-				folderWater.open();
+				// // GUI
+				//
+				// const gui = new GUI();
+				//
+				// const waterUniforms = water.material.uniforms;
+				// waterUniforms.size.value = 0.05;
+				//
+				// const folderWater = gui.addFolder( 'Water' );
+				// folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
+				// folderWater.add( waterUniforms.size, 'value', 0.01, 1, 0.01 ).name( 'size' );
+				// folderWater.add( waterUniforms.waterColor.value, 'r', 0.0, 1, 0.01 ).name( 'r' );
+				// folderWater.add( waterUniforms.waterColor.value, 'g', 0.0, 1, 0.01 ).name( 'g' );
+				// folderWater.add( waterUniforms.waterColor.value, 'b', 0.0, 1, 0.01 ).name( 'b' );
+				// folderWater.open();
 
 				// WINDOW RESIZE
 
