@@ -339,6 +339,10 @@
 				);
 
 				water.rotation.x = - Math.PI / 2;
+
+				const waterUniforms = water.material.uniforms;
+				waterUniforms.size.value = 0.05;
+
 				scene.add( water );
 
 				// LOAD MODEL
@@ -487,9 +491,6 @@
 				// // GUI
 				//
 				// const gui = new GUI();
-				//
-				// const waterUniforms = water.material.uniforms;
-				// waterUniforms.size.value = 0.05;
 				//
 				// const folderWater = gui.addFolder( 'Water' );
 				// folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
