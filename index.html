@@ -274,7 +274,7 @@
 
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0x2d6c75 );
-				//scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
+				//scene.fog = new THREE.Fog( 0x467f89, 1000, 4000 );
 
 				const loader = new THREE.CubeTextureLoader();
 				loader.setPath( './3d/' );
@@ -287,15 +287,23 @@
 
 				// LIGHTING
 
-				const light = new THREE.HemisphereLight( 0x6f9ebd, 0x293d4d, 1.2 );
+				const light = new THREE.HemisphereLight( 0xe2f0ff, 0x51687a, 0.5 );
 				light.position.set( 0, 0, 0 );
 				scene.add( light );
 
-				const directionalLightBack = new THREE.DirectionalLight( 0x6fa0bd, 0.2 );
-				directionalLightBack.position.set( -500, 0, -0 );
-				scene.add( directionalLightBack );
+				const directionalLightBack1 = new THREE.DirectionalLight( 0x6fa0bd, 0.1 );
+				directionalLightBack1.position.set( -500, 0, -0 );
+				scene.add( directionalLightBack1 );
 
-				const directionalLight = new THREE.DirectionalLight( 0xfffdc2, 1.0 );
+				const directionalLightBack2 = new THREE.DirectionalLight( 0xfffefd, 0.1 );
+				directionalLightBack2.position.set( 0, 0, 500 );
+				scene.add( directionalLightBack2 );
+
+				const directionalLightBack3 = new THREE.DirectionalLight( 0xffd8e7, 0.1 );
+				directionalLightBack3.position.set( 500, 0, 500 );
+				scene.add( directionalLightBack3 );
+
+				const directionalLight = new THREE.DirectionalLight( 0xfffdda, 1.1 );
 				directionalLight.position.set( 500, 1000, 500 );
 				directionalLight.castShadow = true;
 				scene.add( directionalLight );
@@ -309,6 +317,11 @@
 				directionalLight.shadow.camera.top = 1000;
 				directionalLight.shadow.camera.bottom = -1000;
 				directionalLight.shadow.bias = -0.01;
+
+				// const pointLight = new THREE.PointLight( 0xffffff, 1, 500 );
+				// pointLight.position.set( 0, 100, 0 );
+				// pointLight.castShadow = true;
+				// scene.add( pointLight );
 
 				// //Create a helper for the shadow camera
 				// const helper = new THREE.CameraHelper( directionalLight.shadow.camera );
@@ -488,17 +501,55 @@
 				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 				document.body.appendChild( renderer.domElement );
 
-				// // GUI
-				//
-				// const gui = new GUI();
-				//
-				// const folderWater = gui.addFolder( 'Water' );
-				// folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
-				// folderWater.add( waterUniforms.size, 'value', 0.01, 1, 0.01 ).name( 'size' );
-				// folderWater.add( waterUniforms.waterColor.value, 'r', 0.0, 1, 0.01 ).name( 'r' );
-				// folderWater.add( waterUniforms.waterColor.value, 'g', 0.0, 1, 0.01 ).name( 'g' );
-				// folderWater.add( waterUniforms.waterColor.value, 'b', 0.0, 1, 0.01 ).name( 'b' );
-				// folderWater.open();
+				// GUI
+
+				const gui = new GUI();
+
+				var params = {
+						//fogColor: scene.fog.color.getHex(),
+				    hemisphereColor: light.color.getHex(),
+						hemisphereGroundColor: light.groundColor.getHex(),
+						directionalColor: directionalLight.color.getHex(),
+						directional1Color: directionalLightBack1.color.getHex(),
+						directional2Color: directionalLightBack2.color.getHex(),
+						directional3Color: directionalLightBack3.color.getHex(),
+				};
+
+				//const folderFog = gui.addFolder( 'Fog' );
+				//folderFog.addColor( params, 'fogColor' ).onChange( function( val ) { scene.fog.color.setHex( val ); }).name( 'fog color');
+
+
+				const folderLighting = gui.addFolder( 'Lighting' );
+				folderLighting.add( light, 'intensity', 0.0, 2, 0.1 ).name( 'h intensity');
+				folderLighting.addColor( params, 'hemisphereColor' ).onChange( function( val ) { light.color.setHex( val ); }).name( 'h color');
+				folderLighting.addColor( params, 'hemisphereGroundColor' ).onChange( function( val ) { light.groundColor.setHex( val ); }).name( 'ground color');
+				folderLighting.add( directionalLight, 'intensity', 0.0, 2, 0.1 ).name( 'd intensity');
+				folderLighting.add( directionalLight.position, 'y', 0.0, 1000, 1 ).name( 'd y');
+				folderLighting.addColor( params, 'directionalColor' ).onChange( function( val ) { directionalLight.color.setHex( val ); }).name( 'd color');
+				folderLighting.add( directionalLightBack1, 'intensity', 0.0, 2, 0.1 ).name( 'db1 intensity');
+				folderLighting.add( directionalLightBack1.position, 'x', -500, 500, 1 ).name( 'db1 y');
+				folderLighting.add( directionalLightBack1.position, 'y', 0.0, 1000, 1 ).name( 'db1 y');
+				folderLighting.add( directionalLightBack1.position, 'z', -500, 500, 1 ).name( 'db1 y');
+				folderLighting.addColor( params, 'directional1Color' ).onChange( function( val ) { directionalLightBack1.color.setHex( val ); }).name( 'db1 color');
+				folderLighting.add( directionalLightBack2, 'intensity', 0.0, 2, 0.1 ).name( 'db2 intensity');
+				folderLighting.add( directionalLightBack2.position, 'x', -500, 500, 1 ).name( 'db2 y');
+				folderLighting.add( directionalLightBack2.position, 'y', 0.0, 1000, 1 ).name( 'db2 y');
+				folderLighting.add( directionalLightBack2.position, 'z', -500, 500, 1 ).name( 'db2 y');
+				folderLighting.addColor( params, 'directional2Color' ).onChange( function( val ) { directionalLightBack2.color.setHex( val ); }).name( 'db2 color');
+				folderLighting.add( directionalLightBack3, 'intensity', 0.0, 2, 0.1 ).name( 'db3 intensity');
+				folderLighting.add( directionalLightBack3.position, 'x', -500, 500, 1 ).name( 'db3 y');
+				folderLighting.add( directionalLightBack3.position, 'y', 0.0, 1000, 1 ).name( 'db3 y');
+				folderLighting.add( directionalLightBack3.position, 'z', -500, 500, 1 ).name( 'db3 y');
+				folderLighting.addColor( params, 'directional3Color' ).onChange( function( val ) { directionalLightBack3.color.setHex( val ); }).name( 'db3 color');
+				folderLighting.open();
+
+				const folderWater = gui.addFolder( 'Water' );
+				folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
+				folderWater.add( waterUniforms.size, 'value', 0.01, 1, 0.01 ).name( 'size' );
+				folderWater.add( waterUniforms.waterColor.value, 'r', 0.0, 1, 0.01 ).name( 'r' );
+				folderWater.add( waterUniforms.waterColor.value, 'g', 0.0, 1, 0.01 ).name( 'g' );
+				folderWater.add( waterUniforms.waterColor.value, 'b', 0.0, 1, 0.01 ).name( 'b' );
+
 
 				// WINDOW RESIZE
 
