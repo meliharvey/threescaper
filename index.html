@@ -61,6 +61,8 @@
 
 		<script type="module">
 
+			import Stats from './js/examples/jsm/libs/stats.module.js';
+
 			import * as THREE from './js/build/three.module.js';
 
 			import { PointerLockControls } from './js/PointerLockControls.js';
@@ -96,6 +98,8 @@
 			const direction = new THREE.Vector3();
 			const vertex = new THREE.Vector3();
 			const color = new THREE.Color();
+
+			const stats = new Stats();
 
 			init();
 			animate();
@@ -244,7 +248,6 @@
 						feature.material.onBeforeCompile = shader => updateShaderColor(shader);
 						feature.material.side = THREE.BackSide;
 						feature.material.transparent = false;
-						feature.castShadow = true;
 						feature.receiveShadow = true;
 						objects.push( feature );
 						features.add( feature );
@@ -256,7 +259,6 @@
 						feature.material.onBeforeCompile = shader => updateShader(shader);
 						feature.material.side = THREE.FrontSide;
 						feature.material.transparent = false;
-						feature.castShadow = true;
 						feature.receiveShadow = true;
 						objects.push( feature );
 						features.add( feature );
@@ -330,7 +332,7 @@
 				// WATER
 
 				const waterGeometry = new THREE.PlaneGeometry( 10000, 10000 );
-				waterGeometry.translate(0, 0, -0.1);
+				waterGeometry.translate(0, 0, -0.01);
 
 				water = new Water(
 					waterGeometry,
@@ -500,6 +502,7 @@
 				renderer.shadowMap.enabled = true;
 				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 				document.body.appendChild( renderer.domElement );
+				document.body.appendChild( stats.dom );
 
 				// GUI
 
@@ -541,7 +544,7 @@
 				folderLighting.add( directionalLightBack3.position, 'y', 0.0, 1000, 1 ).name( 'db3 y');
 				folderLighting.add( directionalLightBack3.position, 'z', -500, 500, 1 ).name( 'db3 y');
 				folderLighting.addColor( params, 'directional3Color' ).onChange( function( val ) { directionalLightBack3.color.setHex( val ); }).name( 'db3 color');
-				folderLighting.open();
+			  //	folderLighting.open();
 
 				const folderWater = gui.addFolder( 'Water' );
 				folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
@@ -655,6 +658,8 @@
 				}
 
 				prevTime = time;
+
+				stats.update();
 
 				renderer.render( scene, camera );
 
