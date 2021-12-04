@@ -224,6 +224,7 @@
 				for ( var i = 0; i < object.children.length; i ++ ) {
 					let feature = object.children[i].clone()
 					feature.scale.multiplyScalar(40);
+					feature.scale.x *= -1;
 
 					if ( feature.name == 'House') {
 						feature.material = new THREE.MeshStandardMaterial();
@@ -389,7 +390,7 @@
 						new OBJLoader( manager )
 							.setMaterials( materials )
 							.setPath( './3d/' )
-							.load( 'GardenTown.obj', function ( object ) {
+							.load( 'TownZ5hejPFfRgxLZ0G9.obj', function ( object ) {
 
 								scene.add(parseTownscape(object, materials))
 							}, onProgress, onError );
