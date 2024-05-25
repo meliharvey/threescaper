@@ -1,142 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>three.js - pointerlock controls</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<link type="text/css" rel="stylesheet" href="main.css">
-		<style>
-			#blocker {
-				position: absolute;
-				width: 100%;
-				height: 100%;
-				background-color: rgba(0,0,0,0.5);
-			}
 
-			#instructions {
-				width: 100%;
-				height: 100%;
+<head>
+	<title>Threescaper</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+	<style>
+		#blocker {
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(0, 0, 0, 0.5);
+		}
 
-				display: -webkit-box;
-				display: -moz-box;
-				display: box;
+		#instructions {
+			width: 100%;
+			height: 100%;
 
-				-webkit-box-orient: horizontal;
-				-moz-box-orient: horizontal;
-				box-orient: horizontal;
+			display: -webkit-box;
+			display: -moz-box;
+			display: box;
 
-				-webkit-box-pack: center;
-				-moz-box-pack: center;
-				box-pack: center;
+			-webkit-box-orient: horizontal;
+			-moz-box-orient: horizontal;
+			box-orient: horizontal;
 
-				-webkit-box-align: center;
-				-moz-box-align: center;
-				box-align: center;
+			-webkit-box-pack: center;
+			-moz-box-pack: center;
+			box-pack: center;
 
-				color: #ffffff;
-				text-align: center;
-				font-family: Arial;
-				font-size: 14px;
-				line-height: 24px;
+			-webkit-box-align: center;
+			-moz-box-align: center;
+			box-align: center;
 
-				cursor: pointer;
-			}
-		</style>
-	</head>
-	<body>
-		<div id="blocker">
-			<div id="instructions">
-				<div id="holder">
-					<p>Drag and drop</br>Townscaper OBJ file here</p>
-				</div>
-				</br>
-				<span style="font-size:36px">Click to play</span>
-				<br /><br />
-				Move: WASD<br/>
-				Jump: SPACE<br/>
-				Look: MOUSE
+			color: #ffffff;
+			text-align: center;
+			font-family: Arial;
+			font-size: 14px;
+			line-height: 24px;
+
+			cursor: pointer;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="blocker">
+		<div id="instructions">
+			<div id="holder">
+				<p>Drag and drop</br>Townscaper OBJ file here</p>
 			</div>
-
+			</br>
+			<span style="font-size:36px">Click to play</span>
+			<br /><br />
+			Move: WASD<br />
+			Jump: SPACE<br />
+			Look: MOUSE<br />
+			Sprint: SHIFT
 		</div>
 
-		<script type="module">
+	</div>
 
-			import Stats from './js/examples/jsm/libs/stats.module.js';
+	<script type="module">
 
-			import * as THREE from './js/build/three.module.js';
+		import Stats from './js/examples/jsm/libs/stats.module.js';
 
-			import { PointerLockControls } from './js/PointerLockControls.js';
+		import * as THREE from './js/build/three.module.js';
 
-			import { GUI } from './js/dat.gui.module.js';
-			import { DDSLoader } from './js/examples/jsm/loaders/DDSLoader.js';
-			import { MTLLoader } from './js/examples/jsm/loaders/MTLLoader.js';
-			import { OBJLoader } from './js/examples/jsm/loaders/OBJLoader.js';
-			import { Water } from './js/Water.js';
+		import { PointerLockControls } from './js/PointerLockControls.js';
 
-			let camera, scene, renderer, controls, water;
+		import { GUI } from './js/dat.gui.module.js';
+		import { DDSLoader } from './js/examples/jsm/loaders/DDSLoader.js';
+		import { MTLLoader } from './js/examples/jsm/loaders/MTLLoader.js';
+		import { OBJLoader } from './js/examples/jsm/loaders/OBJLoader.js';
+		import { Water } from './js/Water.js';
 
-			const objects = [];
+		let camera, scene, renderer, controls, water;
 
-			let raycaster;
-			let floorHeight = 0;
-			let previousLocation = new THREE.Vector3();
-			let collision;
-			let collision_up;
-			let onObject = false;
-			let hitObject = false;
-			let hitAbove = false;
-			let movementDirection =new THREE.Vector3();
+		const objects = [];
 
-			let moveForward = false;
-			let moveBackward = false;
-			let moveLeft = false;
-			let moveRight = false;
-			let canJump = false;
+		let raycaster;
+		let floorHeight = 0;
+		let previousLocation = new THREE.Vector3();
+		let collision;
+		let collision_up;
+		let onObject = false;
+		let hitObject = false;
+		let hitAbove = false;
+		let movementDirection = new THREE.Vector3();
 
-			let prevTime = performance.now();
-			const velocity = new THREE.Vector3();
-			const direction = new THREE.Vector3();
-			const vertex = new THREE.Vector3();
-			const color = new THREE.Color();
+		let moveForward = false;
+		let moveBackward = false;
+		let moveLeft = false;
+		let moveRight = false;
+		let canJump = false;
+		let isSprinting
 
-			const stats = new Stats();
+		let prevTime = performance.now();
+		const velocity = new THREE.Vector3();
+		const direction = new THREE.Vector3();
+		const vertex = new THREE.Vector3();
+		const color = new THREE.Color();
 
-			init();
-			animate();
+		const stats = new Stats();
 
-			// LOAD THE TOWNSCAPER OBJ
+		init();
+		animate();
 
-			function parseTownscape( object, materials ) {
-				let uniforms = {
-					townPalette: {
-		        type: "sampler2D",
-		        value: THREE.ImageUtils.loadTexture("./3d/TownPalette.png")
-			    },
-					townColor: {
-		        type: "sampler2D",
-		        value: THREE.ImageUtils.loadTexture("./3d/TownColor.png")
-			    },
-					townMaterial: {
-		        type: "sampler2D",
-		        value: THREE.ImageUtils.loadTexture("./3d/TownMaterial.png")
-			    },
-				};
-				uniforms.townColor.value.wrapS = THREE.RepeatWrapping;
-				uniforms.townMaterial.value.wrapS = THREE.RepeatWrapping;
+		// LOAD THE TOWNSCAPER OBJ
 
-				function updateShader(shader) {
-					shader.uniforms.townColor = uniforms.townColor;
-					shader.uniforms.townPalette = uniforms.townPalette;
-					shader.uniforms.townMaterial = uniforms.townMaterial;
-					shader.vertexShader =	'varying vec2 vUv;\n' +	shader.vertexShader.replace(
-						'#include <uv_vertex>',
-						`
+		function parseTownscape(object, materials) {
+			let uniforms = {
+				townPalette: {
+					type: "sampler2D",
+					value: THREE.ImageUtils.loadTexture("./3d/TownPalette.png")
+				},
+				townColor: {
+					type: "sampler2D",
+					value: THREE.ImageUtils.loadTexture("./3d/TownColor.png")
+				},
+				townMaterial: {
+					type: "sampler2D",
+					value: THREE.ImageUtils.loadTexture("./3d/TownMaterial.png")
+				},
+			};
+			uniforms.townColor.value.wrapS = THREE.RepeatWrapping;
+			uniforms.townMaterial.value.wrapS = THREE.RepeatWrapping;
+
+			function updateShader(shader) {
+				shader.uniforms.townColor = uniforms.townColor;
+				shader.uniforms.townPalette = uniforms.townPalette;
+				shader.uniforms.townMaterial = uniforms.townMaterial;
+				shader.vertexShader = 'varying vec2 vUv;\n' + shader.vertexShader.replace(
+					'#include <uv_vertex>',
+					`
 						#include <uv_vertex>
 						vUv = uv;
 						`
-					)
-					shader.fragmentShader =
-						`
+				)
+				shader.fragmentShader =
+					`
 						uniform sampler2D townColor;
 						varying vec2 vUv;
 						`
@@ -159,28 +163,28 @@
 						diffuseColor = texture2D(townColor, tile_uv);
 						`
 					)
-				}
+			}
 
-				function updateShaderColor(shader) {
-					shader.uniforms.townColor = uniforms.townColor;
-					shader.uniforms.townPalette = uniforms.townPalette;
-					shader.uniforms.townMaterial = uniforms.townMaterial;
-					shader.vertexShader =	'varying vec2 vUv;\n' +	shader.vertexShader.replace(
-						'#include <uv_vertex>',
-						`
+			function updateShaderColor(shader) {
+				shader.uniforms.townColor = uniforms.townColor;
+				shader.uniforms.townPalette = uniforms.townPalette;
+				shader.uniforms.townMaterial = uniforms.townMaterial;
+				shader.vertexShader = 'varying vec2 vUv;\n' + shader.vertexShader.replace(
+					'#include <uv_vertex>',
+					`
 						#include <uv_vertex>
 						vUv = uv;
 						`
-					)
-					shader.fragmentShader =
-						`
+				)
+				shader.fragmentShader =
+					`
 						uniform sampler2D townPalette;
 						uniform sampler2D townColor;
 						uniform sampler2D townMaterial;
 			      varying vec2 vUv;
 						`
- 					+ shader.fragmentShader.replace(
-			      'vec4 diffuseColor = vec4( diffuse, opacity );',
+					+ shader.fragmentShader.replace(
+						'vec4 diffuseColor = vec4( diffuse, opacity );',
 						`
 						vec4 diffuseColor;
 						float gap = 0.05;
@@ -215,160 +219,489 @@
 
 						diffuseColor = vec4(mix(colorA, colorB, colorB.a));
 						`
-			    )
-				}
-
-				const features = new THREE.Group();
-				features.name = 'Townscape'
-
-				for ( var i = 0; i < object.children.length; i ++ ) {
-					let feature = object.children[i].clone()
-					feature.scale.multiplyScalar(40);
-					feature.scale.x *= -1;
-
-					if ( feature.name == 'House') {
-						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.onBeforeCompile = shader => updateShaderColor(shader);
-						feature.material.side = THREE.FrontSide;
-						feature.material.transparent = false;
-						feature.castShadow = true;
-						feature.receiveShadow = true;
-						objects.push( feature );
-						features.add( feature );
-					}
-					else if ( feature.name == 'Fencing') {
-						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.onBeforeCompile = shader => updateShader(shader);
-						feature.material.side = THREE.DoubleSide;
-						feature.material.transparent = true;
-						objects.push( feature );
-						features.add( feature );
-					}
-					else if ( feature.name == 'Windows') {
-						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.onBeforeCompile = shader => updateShaderColor(shader);
-						feature.material.side = THREE.BackSide;
-						feature.material.transparent = false;
-						feature.receiveShadow = true;
-						objects.push( feature );
-						features.add( feature );
-					}
-					else if ( feature.name == 'Water') {
-					}
-					else {
-						feature.material = new THREE.MeshStandardMaterial();
-						feature.material.onBeforeCompile = shader => updateShader(shader);
-						feature.material.side = THREE.FrontSide;
-						feature.material.transparent = false;
-						feature.receiveShadow = true;
-						objects.push( feature );
-						features.add( feature );
-					}
-				}
-			  return features
+					)
 			}
 
-			// INITIALIZE THREEJS SCENE
+			const features = new THREE.Group();
+			features.name = 'Townscape'
 
-			function init() {
+			for (var i = 0; i < object.children.length; i++) {
+				let feature = object.children[i].clone()
+				feature.scale.multiplyScalar(40);
+				feature.scale.x *= -1;
 
-				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
-				camera.position.y = 200;
+				if (feature.name == 'House') {
+					feature.material = new THREE.MeshStandardMaterial();
+					feature.material.onBeforeCompile = shader => updateShaderColor(shader);
+					feature.material.side = THREE.FrontSide;
+					feature.material.transparent = false;
+					feature.castShadow = true;
+					feature.receiveShadow = true;
+					objects.push(feature);
+					features.add(feature);
+				}
+				else if (feature.name == 'Fencing') {
+					feature.material = new THREE.MeshStandardMaterial();
+					feature.material.onBeforeCompile = shader => updateShader(shader);
+					feature.material.side = THREE.DoubleSide;
+					feature.material.transparent = true;
+					objects.push(feature);
+					features.add(feature);
+				}
+				else if (feature.name == 'Windows') {
+					feature.material = new THREE.MeshStandardMaterial();
+					feature.material.onBeforeCompile = shader => updateShaderColor(shader);
+					feature.material.side = THREE.BackSide;
+					feature.material.transparent = false;
+					feature.receiveShadow = true;
+					objects.push(feature);
+					features.add(feature);
+				}
+				else if (feature.name == 'Water') {
+				}
+				else {
+					feature.material = new THREE.MeshStandardMaterial();
+					feature.material.onBeforeCompile = shader => updateShader(shader);
+					feature.material.side = THREE.FrontSide;
+					feature.material.transparent = false;
+					feature.receiveShadow = true;
+					objects.push(feature);
+					features.add(feature);
+				}
+			}
+			return features
+		}
 
-				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0x2d6c75 );
-				//scene.fog = new THREE.Fog( 0x467f89, 1000, 4000 );
+		// INITIALIZE THREEJS SCENE
 
-				const loader = new THREE.CubeTextureLoader();
-				loader.setPath( './3d/' );
-				const textureCube = loader.load( [
-					'clouds_side.jpg', 'clouds_side.jpg',
-					'clouds_top.jpg', 'clouds_top.jpg',
-					'clouds_side.jpg', 'clouds_side.jpg'
-				] );
-				scene.background = textureCube;
+		function init() {
 
-				// LIGHTING
+			camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+			camera.position.y = 200;
 
-				const light = new THREE.HemisphereLight( 0xe2f0ff, 0x51687a, 0.5 );
-				light.position.set( 0, 0, 0 );
-				scene.add( light );
+			scene = new THREE.Scene();
+			scene.background = new THREE.Color(0x2d6c75);
+			//scene.fog = new THREE.Fog( 0x467f89, 1000, 4000 );
 
-				const directionalLightBack1 = new THREE.DirectionalLight( 0x6fa0bd, 0.1 );
-				directionalLightBack1.position.set( -500, 0, -0 );
-				scene.add( directionalLightBack1 );
+			const loader = new THREE.CubeTextureLoader();
+			loader.setPath('./3d/');
+			const textureCube = loader.load([
+				'clouds_side.jpg', 'clouds_side.jpg',
+				'clouds_top.jpg', 'clouds_top.jpg',
+				'clouds_side.jpg', 'clouds_side.jpg'
+			]);
+			scene.background = textureCube;
 
-				const directionalLightBack2 = new THREE.DirectionalLight( 0xfffefd, 0.1 );
-				directionalLightBack2.position.set( 0, 0, 500 );
-				scene.add( directionalLightBack2 );
+			// LIGHTING
 
-				const directionalLightBack3 = new THREE.DirectionalLight( 0xffd8e7, 0.1 );
-				directionalLightBack3.position.set( 500, 0, 500 );
-				scene.add( directionalLightBack3 );
+			const light = new THREE.HemisphereLight(0xe2f0ff, 0x51687a, 0.5);
+			light.position.set(0, 0, 0);
+			scene.add(light);
 
-				const directionalLight = new THREE.DirectionalLight( 0xfffdda, 1.1 );
-				directionalLight.position.set( 500, 1000, 500 );
-				directionalLight.castShadow = true;
-				scene.add( directionalLight );
+			const directionalLightBack1 = new THREE.DirectionalLight(0x6fa0bd, 0.1);
+			directionalLightBack1.position.set(-500, 0, -0);
+			scene.add(directionalLightBack1);
 
-				directionalLight.shadow.mapSize.width = 512;
-				directionalLight.shadow.mapSize.height = 512;
-				directionalLight.shadow.camera.near = 0;
-				directionalLight.shadow.camera.far = 3000;
-				directionalLight.shadow.camera.left = 1000;
-				directionalLight.shadow.camera.right = -1000;
-				directionalLight.shadow.camera.top = 1000;
-				directionalLight.shadow.camera.bottom = -1000;
-				directionalLight.shadow.bias = -0.01;
+			const directionalLightBack2 = new THREE.DirectionalLight(0xfffefd, 0.1);
+			directionalLightBack2.position.set(0, 0, 500);
+			scene.add(directionalLightBack2);
 
-				// const pointLight = new THREE.PointLight( 0xffffff, 1, 500 );
-				// pointLight.position.set( 0, 100, 0 );
-				// pointLight.castShadow = true;
-				// scene.add( pointLight );
+			const directionalLightBack3 = new THREE.DirectionalLight(0xffd8e7, 0.1);
+			directionalLightBack3.position.set(500, 0, 500);
+			scene.add(directionalLightBack3);
 
-				// //Create a helper for the shadow camera
-				// const helper = new THREE.CameraHelper( directionalLight.shadow.camera );
-				// scene.add( helper );
+			const directionalLight = new THREE.DirectionalLight(0xfffdda, 1.1);
+			directionalLight.position.set(500, 1000, 500);
+			directionalLight.castShadow = true;
+			scene.add(directionalLight);
 
-				// WATER
+			directionalLight.shadow.mapSize.width = 512;
+			directionalLight.shadow.mapSize.height = 512;
+			directionalLight.shadow.camera.near = 0;
+			directionalLight.shadow.camera.far = 3000;
+			directionalLight.shadow.camera.left = 1000;
+			directionalLight.shadow.camera.right = -1000;
+			directionalLight.shadow.camera.top = 1000;
+			directionalLight.shadow.camera.bottom = -1000;
+			directionalLight.shadow.bias = -0.01;
 
-				const waterGeometry = new THREE.PlaneGeometry( 10000, 10000 );
-				waterGeometry.translate(0, 0, -0.01);
+			// const pointLight = new THREE.PointLight( 0xffffff, 1, 500 );
+			// pointLight.position.set( 0, 100, 0 );
+			// pointLight.castShadow = true;
+			// scene.add( pointLight );
 
-				water = new Water(
-					waterGeometry,
-					{
-						textureWidth: 512,
-						textureHeight: 512,
-						waterNormals: new THREE.TextureLoader().load( './textures/waternormals.jpg', function ( texture ) {
+			// //Create a helper for the shadow camera
+			// const helper = new THREE.CameraHelper( directionalLight.shadow.camera );
+			// scene.add( helper );
 
-							texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+			// WATER
 
-						} ),
-						sunDirection: new THREE.Vector3(),
-						sunColor: 0xffffff,
-						waterColor: 0x2d6c75,
-						distortionScale: 3.7,
-						size: 0.1,
-						fog: scene.fog !== undefined
+			const waterGeometry = new THREE.PlaneGeometry(10000, 10000);
+			waterGeometry.translate(0, 0, -0.01);
+
+			water = new Water(
+				waterGeometry,
+				{
+					textureWidth: 512,
+					textureHeight: 512,
+					waterNormals: new THREE.TextureLoader().load('./textures/waternormals.jpg', function (texture) {
+
+						texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+					}),
+					sunDirection: new THREE.Vector3(),
+					sunColor: 0xffffff,
+					waterColor: 0x2d6c75,
+					distortionScale: 3.7,
+					size: 0.1,
+					fog: scene.fog !== undefined
+				}
+			);
+
+			water.rotation.x = - Math.PI / 2;
+
+			const waterUniforms = water.material.uniforms;
+			waterUniforms.size.value = 0.05;
+
+			scene.add(water);
+
+			// LOAD MODEL
+
+			const onProgress = function (xhr) {
+
+				if (xhr.lengthComputable) {
+
+					const percentComplete = xhr.loaded / xhr.total * 100;
+					console.log(Math.round(percentComplete, 2) + '% downloaded');
+
+				}
+
+			};
+
+			const onError = function () { };
+
+			const manager = new THREE.LoadingManager();
+			manager.addHandler(/\.dds$/i, new DDSLoader());
+
+			var materials = new THREE.MeshStandardMaterial();
+
+			new MTLLoader(manager)
+				.setPath('./3d/')
+				.load('Town.mtl', function (materials) {
+
+					//materials.preload();
+
+					new OBJLoader(manager)
+						.setMaterials(materials)
+						.setPath('./3d/')
+						.load('TownZ5hejPFfRgxLZ0G9.obj', function (object) {
+
+							scene.add(parseTownscape(object, materials))
+						}, onProgress, onError);
+
+				});
+
+
+			// CONTROLS
+
+			controls = new PointerLockControls(camera, document.body);
+
+			const blocker = document.getElementById('blocker');
+			const instructions = document.getElementById('instructions');
+
+			instructions.addEventListener('click', function () {
+
+				controls.lock();
+
+			}, false);
+
+			controls.addEventListener('lock', function () {
+
+				instructions.style.display = 'none';
+				blocker.style.display = 'none';
+
+			});
+
+			controls.addEventListener('unlock', function () {
+
+				blocker.style.display = 'block';
+				instructions.style.display = '';
+
+			});
+
+			scene.add(controls.getObject());
+
+			const onKeyDown = function (event) {
+
+				switch (event.keyCode) {
+
+					case 38: // up
+					case 87: // w
+						moveForward = true;
+						break;
+
+					case 37: // left
+					case 65: // a
+						moveLeft = true;
+						break;
+
+					case 40: // down
+					case 83: // s
+						moveBackward = true;
+						break;
+
+					case 39: // right
+					case 68: // d
+						moveRight = true;
+						break;
+
+					case 32: // space
+						if (canJump === true) velocity.y += 350;
+						canJump = false;
+						break;
+
+					case 16: // shift
+						isSprinting = true;
+						break;
+
+				}
+
+			};
+
+			const onKeyUp = function (event) {
+
+				switch (event.keyCode) {
+
+					case 38: // up
+					case 87: // w
+						moveForward = false;
+						break;
+
+					case 37: // left
+					case 65: // a
+						moveLeft = false;
+						break;
+
+					case 40: // down
+					case 83: // s
+						moveBackward = false;
+						break;
+
+					case 39: // right
+					case 68: // d
+						moveRight = false;
+						break;
+
+					case 16: // shift
+						isSprinting = false;
+						break;
+
+				}
+
+			};
+
+			document.addEventListener('keydown', onKeyDown, false);
+			document.addEventListener('keyup', onKeyUp, false);
+
+			raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, - 1, 0), 0, 16);
+			collision_up = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 1, 0), 0, 5);
+			collision = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, 1), 0, 5);
+
+			// RENDERER
+
+			renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			document.body.appendChild(renderer.domElement);
+			document.body.appendChild(stats.dom);
+
+			// GUI
+
+			const gui = new GUI();
+
+			var params = {
+				//fogColor: scene.fog.color.getHex(),
+				hemisphereColor: light.color.getHex(),
+				hemisphereGroundColor: light.groundColor.getHex(),
+				directionalColor: directionalLight.color.getHex(),
+				directional1Color: directionalLightBack1.color.getHex(),
+				directional2Color: directionalLightBack2.color.getHex(),
+				directional3Color: directionalLightBack3.color.getHex(),
+			};
+
+			//const folderFog = gui.addFolder( 'Fog' );
+			//folderFog.addColor( params, 'fogColor' ).onChange( function( val ) { scene.fog.color.setHex( val ); }).name( 'fog color');
+
+
+			const folderLighting = gui.addFolder('Lighting');
+			folderLighting.add(light, 'intensity', 0.0, 2, 0.1).name('h intensity');
+			folderLighting.addColor(params, 'hemisphereColor').onChange(function (val) { light.color.setHex(val); }).name('h color');
+			folderLighting.addColor(params, 'hemisphereGroundColor').onChange(function (val) { light.groundColor.setHex(val); }).name('ground color');
+			folderLighting.add(directionalLight, 'intensity', 0.0, 2, 0.1).name('d intensity');
+			folderLighting.add(directionalLight.position, 'x', -500, 500, 1).name('d x');
+			folderLighting.add(directionalLight.position, 'y', 0.0, 1000, 1).name('d y');
+			folderLighting.add(directionalLight.position, 'z', -500, 500, 1).name('d z');
+			folderLighting.addColor(params, 'directionalColor').onChange(function (val) { directionalLight.color.setHex(val); }).name('d color');
+			folderLighting.add(directionalLightBack1, 'intensity', 0.0, 2, 0.1).name('db1 intensity');
+			folderLighting.add(directionalLightBack1.position, 'x', -500, 500, 1).name('db1 x');
+			folderLighting.add(directionalLightBack1.position, 'y', 0.0, 1000, 1).name('db1 y');
+			folderLighting.add(directionalLightBack1.position, 'z', -500, 500, 1).name('db1 z');
+			folderLighting.addColor(params, 'directional1Color').onChange(function (val) { directionalLightBack1.color.setHex(val); }).name('db1 color');
+			folderLighting.add(directionalLightBack2, 'intensity', 0.0, 2, 0.1).name('db2 intensity');
+			folderLighting.add(directionalLightBack2.position, 'x', -500, 500, 1).name('db2 x');
+			folderLighting.add(directionalLightBack2.position, 'y', 0.0, 1000, 1).name('db2 y');
+			folderLighting.add(directionalLightBack2.position, 'z', -500, 500, 1).name('db2 z');
+			folderLighting.addColor(params, 'directional2Color').onChange(function (val) { directionalLightBack2.color.setHex(val); }).name('db2 color');
+			folderLighting.add(directionalLightBack3, 'intensity', 0.0, 2, 0.1).name('db3 intensity');
+			folderLighting.add(directionalLightBack3.position, 'x', -500, 500, 1).name('db3 x');
+			folderLighting.add(directionalLightBack3.position, 'y', 0.0, 1000, 1).name('db3 y');
+			folderLighting.add(directionalLightBack3.position, 'z', -500, 500, 1).name('db3 z');
+			folderLighting.addColor(params, 'directional3Color').onChange(function (val) { directionalLightBack3.color.setHex(val); }).name('db3 color');
+			//	folderLighting.open();
+
+			const folderWater = gui.addFolder('Water');
+			folderWater.add(waterUniforms.distortionScale, 'value', 0, 8, 0.1).name('distortionScale');
+			folderWater.add(waterUniforms.size, 'value', 0.01, 1, 0.01).name('size');
+			folderWater.add(waterUniforms.waterColor.value, 'r', 0.0, 1, 0.01).name('r');
+			folderWater.add(waterUniforms.waterColor.value, 'g', 0.0, 1, 0.01).name('g');
+			folderWater.add(waterUniforms.waterColor.value, 'b', 0.0, 1, 0.01).name('b');
+
+
+			// WINDOW RESIZE
+
+			window.addEventListener('resize', onWindowResize, false);
+
+		}
+
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize(window.innerWidth, window.innerHeight);
+
+		}
+
+		function animate() {
+
+			water.material.uniforms['time'].value += 1.0 / 60.0;
+
+			requestAnimationFrame(animate);
+
+			const time = performance.now();
+
+			if (controls.isLocked === true) {
+
+				const delta = (time - prevTime) / 1000;
+
+				velocity.x -= velocity.x * 10.0 * delta;
+				velocity.z -= velocity.z * 10.0 * delta;
+
+				velocity.y = Math.max(-300, velocity.y - 9.8 * 100.0 * delta); // 100.0 = mass
+
+				direction.z = Number(moveForward) - Number(moveBackward);
+				direction.x = Number(moveRight) - Number(moveLeft);
+				direction.normalize(); // this ensures consistent movements in all directions
+
+				collision_up.ray.origin.copy(controls.getObject().position);
+				const intersections_above = collision_up.intersectObjects(objects);
+				hitAbove = intersections_above.length > 0
+
+				raycaster.ray.origin.copy(controls.getObject().position);
+				const intersections = raycaster.intersectObjects(objects);
+				onObject = intersections.length > 0
+
+				var vector = new THREE.Vector3(0, 0, -1); // local direction of camera
+				var global_camera_direction = vector.clone().applyQuaternion(camera.quaternion);
+				global_camera_direction.y = 0;
+
+				collision.ray.origin.copy(controls.getObject().position);
+				collision.ray.origin.y = collision.ray.origin.y - 7;
+
+				// if moving, update direction of collision ray
+				if (direction.x != 0 || direction.z != 0) {
+					var theta = new THREE.Vector3(0, 0, 1).angleTo(direction);
+					if (direction.x > 0) {
+						theta = -theta
 					}
-				);
+					movementDirection = global_camera_direction.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), theta)
+				}
 
-				water.rotation.x = - Math.PI / 2;
+				collision.ray.direction = movementDirection;
+				const intersections_z = collision.intersectObjects(objects);
+				hitObject = intersections_z.length > 0;
 
-				const waterUniforms = water.material.uniforms;
-				waterUniforms.size.value = 0.05;
+				const speedMultiplier = isSprinting ? 800.0 : 500.0;
 
-				scene.add( water );
+				if (moveForward || moveBackward) velocity.z -= direction.z * speedMultiplier * delta;
+				if (moveLeft || moveRight) velocity.x -= direction.x * speedMultiplier * delta;
 
-				// LOAD MODEL
 
-				const onProgress = function ( xhr ) {
+				if (onObject === true) {
+					// console.log('onObject')
+					controls.getObject().position.y = intersections[0].point.y + 15
+					velocity.y = Math.max(0, velocity.y);
+					canJump = true;
+				}
 
-					if ( xhr.lengthComputable ) {
+				if (hitAbove === true) {
+					// console.log('hitAbove')
+					velocity.y = Math.min(0, velocity.y);
+				}
+
+				if (hitObject === true) {
+					// console.log('hitObject')
+					velocity.x = 0
+					velocity.z = 0
+					canJump = true;
+				}
+
+				controls.moveRight(- velocity.x * delta);
+				controls.moveForward(- velocity.z * delta);
+
+				controls.getObject().position.y += (velocity.y * delta); // new behavior
+
+				if (controls.getObject().position.y < 15) {
+
+					velocity.y = 0;
+					controls.getObject().position.y = 15;
+
+					canJump = true;
+
+				}
+
+			}
+
+			prevTime = time;
+
+			stats.update();
+
+			renderer.render(scene, camera);
+
+		}
+
+		function setupDragDrop() {
+			var holder = document.getElementById('holder');
+			holder.ondragover = function () {
+				this.className = 'hover';
+				return false;
+			};
+
+			holder.ondragend = function () {
+				this.className = '';
+				return false;
+			};
+
+			holder.ondrop = function (e) {
+
+				const onProgress = function (xhr) {
+
+					if (xhr.lengthComputable) {
 
 						const percentComplete = xhr.loaded / xhr.total * 100;
-						console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
+						console.log(Math.round(percentComplete, 2) + '% downloaded');
 
 					}
 
@@ -376,363 +709,45 @@
 
 				const onError = function () { };
 
-				const manager = new THREE.LoadingManager();
-				manager.addHandler( /\.dds$/i, new DDSLoader() );
+				console.log('uploading obj')
+				this.className = '';
+				e.preventDefault();
 
-				var materials = new THREE.MeshStandardMaterial();
+				let file = e.dataTransfer.files[0];
+				let reader = new FileReader();
+				reader.onload = function (event) {
 
-				new MTLLoader( manager )
-					.setPath( './3d/' )
-					.load( 'Town.mtl', function ( materials ) {
+					let selectedObject = scene.getObjectByName('Townscape');
+					scene.remove(selectedObject);
+					objects.splice(0, objects.length)
+					camera.position.y = 200;
 
-						//materials.preload();
+					var objstring = event.target.result // This is your obj file
+					console.log('ob')
+					const manager = new THREE.LoadingManager();
+					manager.addHandler(/\.dds$/i, new DDSLoader());
 
-						new OBJLoader( manager )
-							.setMaterials( materials )
-							.setPath( './3d/' )
-							.load( 'TownZ5hejPFfRgxLZ0G9.obj', function ( object ) {
+					new MTLLoader(manager)
+						.setPath('./3d/')
+						.load('Town.mtl', function (materials) {
 
-								scene.add(parseTownscape(object, materials))
-							}, onProgress, onError );
+							materials.preload();
 
-					} );
+							var loader = new OBJLoader();
+							var obj3D = loader.parse(objstring);
+							console.log(obj3D)
+							scene.add(parseTownscape(obj3D, materials))
 
-
-				// CONTROLS
-
-				controls = new PointerLockControls( camera, document.body );
-
-				const blocker = document.getElementById( 'blocker' );
-				const instructions = document.getElementById( 'instructions' );
-
-				instructions.addEventListener( 'click', function () {
-
-					controls.lock();
-
-				}, false );
-
-				controls.addEventListener( 'lock', function () {
-
-					instructions.style.display = 'none';
-					blocker.style.display = 'none';
-
-				} );
-
-				controls.addEventListener( 'unlock', function () {
-
-					blocker.style.display = 'block';
-					instructions.style.display = '';
-
-				} );
-
-				scene.add( controls.getObject() );
-
-				const onKeyDown = function ( event ) {
-
-					switch ( event.keyCode ) {
-
-						case 38: // up
-						case 87: // w
-							moveForward = true;
-							break;
-
-						case 37: // left
-						case 65: // a
-							moveLeft = true;
-							break;
-
-						case 40: // down
-						case 83: // s
-							moveBackward = true;
-							break;
-
-						case 39: // right
-						case 68: // d
-							moveRight = true;
-							break;
-
-						case 32: // space
-							if ( canJump === true ) velocity.y += 350;
-							canJump = false;
-							break;
-
-					}
-
+						});
 				};
-
-				const onKeyUp = function ( event ) {
-
-					switch ( event.keyCode ) {
-
-						case 38: // up
-						case 87: // w
-							moveForward = false;
-							break;
-
-						case 37: // left
-						case 65: // a
-							moveLeft = false;
-							break;
-
-						case 40: // down
-						case 83: // s
-							moveBackward = false;
-							break;
-
-						case 39: // right
-						case 68: // d
-							moveRight = false;
-							break;
-
-					}
-
-				};
-
-				document.addEventListener( 'keydown', onKeyDown, false );
-				document.addEventListener( 'keyup', onKeyUp, false );
-
-				raycaster = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, - 1, 0 ), 0, 16 );
-				collision_up = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, 1, 0 ), 0, 5 );
-				collision = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, 0, 1 ), 0, 5 );
-
-				// RENDERER
-
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setPixelRatio( Math.min(window.devicePixelRatio, 1.0) );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.shadowMap.enabled = true;
-				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-				document.body.appendChild( renderer.domElement );
-				document.body.appendChild( stats.dom );
-
-				// GUI
-
-				const gui = new GUI();
-
-				var params = {
-						//fogColor: scene.fog.color.getHex(),
-				    hemisphereColor: light.color.getHex(),
-						hemisphereGroundColor: light.groundColor.getHex(),
-						directionalColor: directionalLight.color.getHex(),
-						directional1Color: directionalLightBack1.color.getHex(),
-						directional2Color: directionalLightBack2.color.getHex(),
-						directional3Color: directionalLightBack3.color.getHex(),
-				};
-
-				//const folderFog = gui.addFolder( 'Fog' );
-				//folderFog.addColor( params, 'fogColor' ).onChange( function( val ) { scene.fog.color.setHex( val ); }).name( 'fog color');
-
-
-				const folderLighting = gui.addFolder( 'Lighting' );
-				folderLighting.add( light, 'intensity', 0.0, 2, 0.1 ).name( 'h intensity');
-				folderLighting.addColor( params, 'hemisphereColor' ).onChange( function( val ) { light.color.setHex( val ); }).name( 'h color');
-				folderLighting.addColor( params, 'hemisphereGroundColor' ).onChange( function( val ) { light.groundColor.setHex( val ); }).name( 'ground color');
-				folderLighting.add( directionalLight, 'intensity', 0.0, 2, 0.1 ).name( 'd intensity');
-				folderLighting.add( directionalLight.position, 'x', -500, 500, 1 ).name( 'd x');
-				folderLighting.add( directionalLight.position, 'y', 0.0, 1000, 1 ).name( 'd y');
-				folderLighting.add( directionalLight.position, 'z', -500, 500, 1 ).name( 'd z');
-				folderLighting.addColor( params, 'directionalColor' ).onChange( function( val ) { directionalLight.color.setHex( val ); }).name( 'd color');
-				folderLighting.add( directionalLightBack1, 'intensity', 0.0, 2, 0.1 ).name( 'db1 intensity');
-				folderLighting.add( directionalLightBack1.position, 'x', -500, 500, 1 ).name( 'db1 x');
-				folderLighting.add( directionalLightBack1.position, 'y', 0.0, 1000, 1 ).name( 'db1 y');
-				folderLighting.add( directionalLightBack1.position, 'z', -500, 500, 1 ).name( 'db1 z');
-				folderLighting.addColor( params, 'directional1Color' ).onChange( function( val ) { directionalLightBack1.color.setHex( val ); }).name( 'db1 color');
-				folderLighting.add( directionalLightBack2, 'intensity', 0.0, 2, 0.1 ).name( 'db2 intensity');
-				folderLighting.add( directionalLightBack2.position, 'x', -500, 500, 1 ).name( 'db2 x');
-				folderLighting.add( directionalLightBack2.position, 'y', 0.0, 1000, 1 ).name( 'db2 y');
-				folderLighting.add( directionalLightBack2.position, 'z', -500, 500, 1 ).name( 'db2 z');
-				folderLighting.addColor( params, 'directional2Color' ).onChange( function( val ) { directionalLightBack2.color.setHex( val ); }).name( 'db2 color');
-				folderLighting.add( directionalLightBack3, 'intensity', 0.0, 2, 0.1 ).name( 'db3 intensity');
-				folderLighting.add( directionalLightBack3.position, 'x', -500, 500, 1 ).name( 'db3 x');
-				folderLighting.add( directionalLightBack3.position, 'y', 0.0, 1000, 1 ).name( 'db3 y');
-				folderLighting.add( directionalLightBack3.position, 'z', -500, 500, 1 ).name( 'db3 z');
-				folderLighting.addColor( params, 'directional3Color' ).onChange( function( val ) { directionalLightBack3.color.setHex( val ); }).name( 'db3 color');
-			  //	folderLighting.open();
-
-				const folderWater = gui.addFolder( 'Water' );
-				folderWater.add( waterUniforms.distortionScale, 'value', 0, 8, 0.1 ).name( 'distortionScale' );
-				folderWater.add( waterUniforms.size, 'value', 0.01, 1, 0.01 ).name( 'size' );
-				folderWater.add( waterUniforms.waterColor.value, 'r', 0.0, 1, 0.01 ).name( 'r' );
-				folderWater.add( waterUniforms.waterColor.value, 'g', 0.0, 1, 0.01 ).name( 'g' );
-				folderWater.add( waterUniforms.waterColor.value, 'b', 0.0, 1, 0.01 ).name( 'b' );
-
-
-				// WINDOW RESIZE
-
-				window.addEventListener( 'resize', onWindowResize, false );
-
+				reader.readAsText(file);
+				return false;
 			}
+		}
 
-			function onWindowResize() {
+		setupDragDrop()
 
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+	</script>
+</body>
 
-				renderer.setSize( window.innerWidth, window.innerHeight );
-
-			}
-
-			function animate() {
-
-				water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
-
-				requestAnimationFrame( animate );
-
-				const time = performance.now();
-
-				if ( controls.isLocked === true ) {
-
-					const delta = ( time - prevTime ) / 1000;
-
-					velocity.x -= velocity.x * 10.0 * delta;
-					velocity.z -= velocity.z * 10.0 * delta;
-
-					velocity.y = Math.max(-300, velocity.y - 9.8 * 100.0 * delta); // 100.0 = mass
-
-					direction.z = Number( moveForward ) - Number( moveBackward );
-					direction.x = Number( moveRight ) - Number( moveLeft );
-					direction.normalize(); // this ensures consistent movements in all directions
-
-					collision_up.ray.origin.copy( controls.getObject().position );
-					const intersections_above = collision_up.intersectObjects( objects );
-					hitAbove = intersections_above.length > 0
-
-					raycaster.ray.origin.copy( controls.getObject().position );
-					const intersections = raycaster.intersectObjects( objects );
-					onObject = intersections.length > 0
-
-					var vector = new THREE.Vector3( 0, 0, -1 ); // local direction of camera
-					var global_camera_direction = vector.clone().applyQuaternion( camera.quaternion );
-					global_camera_direction.y = 0;
-
-					collision.ray.origin.copy( controls.getObject().position );
-					collision.ray.origin.y = collision.ray.origin.y - 7;
-
-					// if moving, update direction of collision ray
-					if (direction.x != 0 || direction.z != 0 ) {
-						var theta = new THREE.Vector3(0, 0, 1).angleTo(direction);
-						if ( direction.x > 0 ) {
-							theta = -theta
-						}
-						movementDirection = global_camera_direction.clone().applyAxisAngle( new THREE.Vector3(0, 1, 0), theta)
-					}
-
-					collision.ray.direction = movementDirection;
-					const intersections_z = collision.intersectObjects( objects );
-					hitObject = intersections_z.length > 0;
-
-					if ( moveForward || moveBackward ) velocity.z -= direction.z * 600.0 * delta;
-					if ( moveLeft || moveRight ) velocity.x -= direction.x * 600.0 * delta;
-
-
-					if ( onObject === true ) {
-						// console.log('onObject')
-						controls.getObject().position.y = intersections[0].point.y + 15
-						velocity.y = Math.max( 0, velocity.y );
-						canJump = true;
-					}
-
-					if ( hitAbove === true ) {
-						// console.log('hitAbove')
-						velocity.y = Math.min( 0, velocity.y );
-					}
-
-					if ( hitObject === true ) {
-						// console.log('hitObject')
-						velocity.x = 0
-						velocity.z = 0
-						canJump = true;
-					}
-
-					controls.moveRight( - velocity.x * delta );
-					controls.moveForward( - velocity.z * delta );
-
-					controls.getObject().position.y += ( velocity.y * delta ); // new behavior
-
-					if ( controls.getObject().position.y < 15 ) {
-
-						velocity.y = 0;
-						controls.getObject().position.y = 15;
-
-						canJump = true;
-
-					}
-
-				}
-
-				prevTime = time;
-
-				stats.update();
-
-				renderer.render( scene, camera );
-
-			}
-
-			function setupDragDrop() {
-	      var holder = document.getElementById('holder');
-	      holder.ondragover = function() {
-	        this.className = 'hover';
-	        return false;
-	      };
-
-	      holder.ondragend = function() {
-	        this.className = '';
-	        return false;
-	      };
-
-	      holder.ondrop = function(e) {
-
-					const onProgress = function ( xhr ) {
-
-						if ( xhr.lengthComputable ) {
-
-							const percentComplete = xhr.loaded / xhr.total * 100;
-							console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
-
-						}
-
-					};
-
-					const onError = function () { };
-
-					console.log('uploading obj')
-					this.className = '';
-		      e.preventDefault();
-
-		      let file = e.dataTransfer.files[0];
-		      let reader = new FileReader();
-		      reader.onload = function(event) {
-
-						let selectedObject = scene.getObjectByName('Townscape');
-    				scene.remove( selectedObject );
-						objects.splice( 0, objects.length )
-						camera.position.y = 200;
-
-						var objstring = event.target.result // This is your obj file
-						console.log('ob')
-						const manager = new THREE.LoadingManager();
-						manager.addHandler( /\.dds$/i, new DDSLoader() );
-
-						new MTLLoader( manager )
-							.setPath( './3d/' )
-							.load( 'Town.mtl', function ( materials ) {
-
-								materials.preload();
-
-								var loader = new OBJLoader();
-								var obj3D = loader.parse(objstring);
-								console.log(obj3D)
-								scene.add(parseTownscape(obj3D, materials))
-
-						} );
-		      };
-		      reader.readAsText(file);
-		      return false;
-			   }
-    	}
-
-			setupDragDrop()
-
-		</script>
-	</body>
 </html>

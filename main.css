@@ -34,7 +34,8 @@ button {
 	-ms-user-select: none;
 	user-select: none;
 	pointer-events: none;
-	z-index: 1; /* TODO Solve this in HTML */
+	z-index: 1;
+	/* TODO Solve this in HTML */
 }
 
 #holder {
@@ -43,15 +44,18 @@ button {
 	height: 200px;
 	margin: 20px;
 	display: flex;
-  justify-content: center;
-  align-items: center;
- }
+	justify-content: center;
+	align-items: center;
+}
 
 #holder.hover {
 	border: 16px dashed #fff;
 }
 
-a, button, input, select {
+a,
+button,
+input,
+select {
 	pointer-events: auto;
 }
 
@@ -60,7 +64,8 @@ a, button, input, select {
 	-webkit-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
-	z-index: 2 !important; /* TODO Solve this in HTML */
+	z-index: 2 !important;
+	/* TODO Solve this in HTML */
 }
 
 #overlay {
@@ -73,17 +78,17 @@ a, button, input, select {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba(0,0,0,0.7);
+	background: rgba(0, 0, 0, 0.7);
 }
 
-	#overlay button {
-		background: #ffffff;
-		border: 0;
-		color: #000000;
-		padding: 16px 20px;
-		text-transform: uppercase;
-		cursor: pointer;
-	}
+#overlay button {
+	background: #ffffff;
+	border: 0;
+	color: #000000;
+	padding: 16px 20px;
+	text-transform: uppercase;
+	cursor: pointer;
+}
 
 #notSupported {
 	width: 50%;
